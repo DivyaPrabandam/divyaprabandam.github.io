@@ -16,11 +16,12 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import java.io.InputStream;
 
-/** Skippable, full-song opening using the owner's four images and recording. */
+/** Skippable, full-song opening using the owner's selected images and recording. */
 public final class LaunchIntro extends Activity {
-    private static final String[] FRAMES={"01.jpg","02.jpg","03.jpg","04.jpg"};
-    // First three use arrival order provisionally. The owner explicitly cued image 04 around 6 seconds.
-    private static final long[] START_MS={0,1900,3800,5850};
+    private static final String[] FRAMES={"01.jpg","02.jpg","04.jpg"};
+    // The owner omitted image 03; image 04 is cued for around the six-second mark.
+    private static final long[] START_MS={0,2900,5700};
+    private static final long FADE_MS=300;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private MediaPlayer player;
     private boolean leaving;
@@ -72,7 +73,7 @@ public final class LaunchIntro extends Activity {
         if(shown<0){front.setImageBitmap(photos[index]);shown=index;return;}
         back.animate().cancel();front.animate().cancel();
         back.setImageBitmap(photos[index]);back.setAlpha(0f);
-        back.animate().alpha(1f).setDuration(140).withEndAction(()->{
+        back.animate().alpha(1f).setDuration(FADE_MS).withEndAction(()->{
             ImageView old=front;front=back;back=old;
             back.setAlpha(0f);back.setImageDrawable(null);
         }).start();
