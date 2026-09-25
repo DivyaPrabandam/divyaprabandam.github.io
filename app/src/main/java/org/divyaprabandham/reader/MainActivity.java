@@ -37,7 +37,8 @@ public final class MainActivity extends Activity {
     private final ArrayList<Verse> verses=new ArrayList<>();
     private JSONArray books; private int bookIndex=2; private String bookName="Thiruppavai", bookAlvar="Andal", bookTamil="திருப்பாவை";
     private final ExecutorService searchWorker=Executors.newSingleThreadExecutor();
-    private ArrayList<SearchEntry> searchIndex;
+    private volatile ArrayList<SearchEntry> searchIndex;
+    private java.util.concurrent.Future<?> currentSearch;
     private SharedPreferences preferences;
     private LinearLayout root, body, bar;
     private int theme=0, selected=0, textSize=21;
@@ -184,11 +185,12 @@ public final class MainActivity extends Activity {
         LinearLayout results=column();add(body,results);
         input.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int c,int f){}public void onTextChanged(CharSequence s,int a,int b,int c){
             final String query=s.toString(); final int generation=++searchGeneration;
+            if(currentSearch!=null)currentSearch.cancel(true);
             results.removeAllViews();add(card(results),text("Searching the offline library…",13,muted(),false));
             mainHandler.postDelayed(()->{
                 if(generation!=searchGeneration)return;
                 if(query.trim().length()<2){renderSearchMatches(results,new ArrayList<>(),false,query,generation);return;}
-                searchWorker.execute(()->{
+                currentSearch=searchWorker.submit(()->{
                     try{SearchResult result=findMatches(query);runOnUiThread(()->{
                         if(generation==searchGeneration&&page.equals("Search"))renderSearchMatches(results,result.matches,result.more,query,generation);
                     });}catch(Exception error){runOnUiThread(()->{
@@ -236,6 +238,7 @@ public final class MainActivity extends Activity {
         String q=query.trim().toLowerCase(Locale.ROOT);boolean numeric=q.matches("[0-9]{1,4}");int queryNumber=numeric?Integer.parseInt(q):-1;
         ArrayList<Match> matches=new ArrayList<>();boolean more=false;
         for(SearchEntry entry:getSearchIndex()){
+            if(Thread.currentThread().isInterrupted())return new SearchResult(matches,false);
             if(numeric){if(queryNumber<entry.number||queryNumber>entry.last)continue;}
             else if(!entry.tamilLower.contains(q)&&!entry.latinLower.contains(q))continue;
             if(matches.size()>=20){more=true;break;}
@@ -270,6 +273,6 @@ public final class MainActivity extends Activity {
     private void showNotice(String tab){page=tab;start(tab,"Coming after the core reader",""+tab);
         add(card(body),text("This is an early build. The approved "+tab.toLowerCase(Locale.ROOT)+" screens are not yet implemented. The reading experience remains usable offline.",15,fg(),false));
     }
-    @Override protected void onDestroy(){searchGeneration++;mainHandler.removeCallbacksAndMessages(null);searchWorker.shutdownNow();super.onDestroy();}
+    @Override protected void onDestroy(){searchGeneration++;mainHandler.removeCallbacksAndMessages(null);if(currentSearch!=null)currentSearch.cancel(true);searchWorker.shutdownNow();super.onDestroy();}
     @Override public void onBackPressed(){if(page.equals("Reader"))showIndex();else if(page.equals("Recite"))showBooks();else showHome();}
 }
