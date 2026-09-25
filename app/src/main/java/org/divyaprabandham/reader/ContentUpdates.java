@@ -36,6 +36,8 @@ final class ContentUpdates {
     private static final long EIGHT_HOURS_MS=8L*60*60*1000;
     private static final String WORK="verified-content-every-8h";
     private static final int MAX_IMAGES_CACHED=50,MAX_IMAGE_CACHE_BYTES=24_000_000;
+    private static final int MAX_IMAGES_PER_WIFI_PASS=8,MAX_IMAGES_PER_CELL_PASS=2;
+    private static final int MAX_IMAGE_BYTES_PER_WIFI_PASS=6_000_000,MAX_IMAGE_BYTES_PER_CELL_PASS=600_000;
     // Contract pending: intentionally no live manifest URL or public key in this build.
     private static final String MANIFEST_URL="",PUBLIC_KEY_X509_BASE64="";
     static boolean configured(){return !MANIFEST_URL.isEmpty()&&!PUBLIC_KEY_X509_BASE64.isEmpty();}
@@ -138,7 +140,7 @@ final class ContentUpdates {
     String check()throws Exception{
         if(!configured())return "unconfigured";
         if(!checkDue())return "not-due";
-        HttpURLConnection conn=(HttpURLConnection)new URL(MANIFEST_URL).openConnection();conn.setConnectTimeout(10000);conn.setReadTimeout(10000);
+        HttpURLConnection conn=(HttpURLConnection)new URL(MANIFEST_URL).openConnection();conn.setInstanceFollowRedirects(false);conn.setConnectTimeout(10000);conn.setReadTimeout(10000);
         try{
             int status=conn.getResponseCode();if(status!=200)throw new IllegalStateException("Manifest HTTP "+status);
             byte[] payload=readBounded(conn.getInputStream(),MAX_MANIFEST);String header=conn.getHeaderField("X-Content-Signature");
@@ -154,14 +156,16 @@ final class ContentUpdates {
     private void syncImages(JSONObject manifest){if(manifest==null)return;
         JSONArray images=manifest.optJSONArray("images");if(images==null||!imageDownloadAllowed())return;
         File cache=new File(snapshots,"images");if(!cache.exists()&&!cache.mkdirs())return;
-        String variant=imageVariant();int scanned=0;
+        String variant=imageVariant();int scanned=0,usedBytes=0;
+        final boolean wifi=isWifi();final int maxCount=wifi?MAX_IMAGES_PER_WIFI_PASS:MAX_IMAGES_PER_CELL_PASS;
+        final int maxBytes=wifi?MAX_IMAGE_BYTES_PER_WIFI_PASS:MAX_IMAGE_BYTES_PER_CELL_PASS;
         for(int i=0;i<images.length();i++){
             try{JSONObject image=images.getJSONObject(i),v=image.getJSONObject(variant);String id=image.getString("id");
                 if(!id.matches("[a-zA-Z0-9_-]{1,80}"))continue;
                 File target=new File(cache,id+".jpg");String hash=v.getString("sha256");
                 if(target.isFile()&&sha256(readBounded(target,1_500_000)).equals(hash))continue;
-                if(scanned++>=MAX_IMAGES_CACHED)break; // Bound optional media churn per pass.
-                int size=v.getInt("bytes");byte[] data=download(v.getString("url"),size);
+                int size=v.getInt("bytes");if(scanned>=maxCount||usedBytes+size>maxBytes)break;
+                scanned++;usedBytes+=size;byte[] data=download(v.getString("url"),size);
                 if(data.length!=size||!sha256(data).equals(hash))continue;
                 android.graphics.BitmapFactory.Options bounds=new android.graphics.BitmapFactory.Options();bounds.inJustDecodeBounds=true;
                 android.graphics.BitmapFactory.decodeByteArray(data,0,data.length,bounds);
@@ -219,7 +223,7 @@ final class ContentUpdates {
     private static void deleteTree(File file){if(file.isDirectory()){File[] children=file.listFiles();if(children!=null)for(File child:children)deleteTree(child);}file.delete();}
     private static byte[] download(String url,int expected)throws Exception{
         if(!url.startsWith("https://"))throw new SecurityException("Insecure resource URL");
-        HttpURLConnection conn=(HttpURLConnection)new URL(url).openConnection();conn.setConnectTimeout(10000);conn.setReadTimeout(15000);
+        HttpURLConnection conn=(HttpURLConnection)new URL(url).openConnection();conn.setInstanceFollowRedirects(false);conn.setConnectTimeout(10000);conn.setReadTimeout(15000);
         try{if(conn.getResponseCode()!=200)throw new IllegalStateException("Resource HTTP "+conn.getResponseCode());return readBounded(conn.getInputStream(),Math.min(MAX_BOOK,expected));}
         finally{conn.disconnect();}
     }
