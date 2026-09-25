@@ -85,9 +85,13 @@ public final class MainActivity extends Activity {
         try { JSONArray updated=contentUpdates.activeBooks();books=updated!=null?updated:new JSONArray(readAsset("books/manifest.json")); }catch(Exception e){throw new IllegalStateException("Book index missing",e);}
         bookIndex=preferences.getInt("book",2); loadBook(bookIndex); if(selected<0||selected>=verses.size())selected=0; showHome();
         // The publisher route and signing key are not configured in this fixture build.
-        if(ContentUpdates.configured()&&contentUpdates.checkDue())updateWorker.execute(()->{try{String state=contentUpdates.check();
-            runOnUiThread(()->{if("app-update-required".equals(state))showHome();else if("updated".equals(state))applyContentUpdate();});
-        }catch(Exception ex){android.util.Log.w("ContentUpdates","Check deferred",ex);}});
+        if(ContentUpdates.configured()&&contentUpdates.checkDue()){
+            getSharedPreferences("content-settings",MODE_PRIVATE).edit().putString("last-result","checking").remove("last-error").apply();showHome();
+            updateWorker.execute(()->{try{String state=contentUpdates.check();
+            runOnUiThread(()->{if("app-update-required".equals(state))showHome();else if("updated".equals(state))applyContentUpdate();else showHome();});
+        }catch(Exception ex){getSharedPreferences("content-settings",MODE_PRIVATE).edit().putString("last-error",ex.getClass().getSimpleName()).apply();
+            android.util.Log.w("ContentUpdates","Check deferred",ex);runOnUiThread(this::showHome);}});}
+        else if(ContentUpdates.configured()){showHome();}
     }
     private void applyContentUpdate(){try{JSONArray refreshed=contentUpdates.activeBooks();if(refreshed==null)return;
         books=refreshed;searchIndex=null;bookIndex=Math.min(bookIndex,books.length()-1);int number=verses.get(selected).number;
@@ -143,7 +147,16 @@ public final class MainActivity extends Activity {
         }
     }
     private void showHome(){page="Home";start("Divya Prabandham","Offline · 25 prabandhams","Home");
-        add(card(body),text("QA TEST BUILD · downloaded text may contain a synthetic test correction. Do not use this edition for recitation.",12,ac(),true));
+        LinearLayout qa=card(body);add(qa,text("QA TEST BUILD · downloaded text may contain a synthetic test correction. Do not use this edition for recitation.",12,ac(),true));
+        try{int version=contentUpdates.activeVersion();
+            android.content.SharedPreferences cp=getSharedPreferences("content-settings",MODE_PRIVATE);
+            String result=cp.getString("last-result","not-checked");String problem=cp.getString("last-error",null);
+            String status=problem!=null?"FAILED · "+problem+". Offline text is still available.":
+                "checking".equals(result)?"CHECKING · waiting for verified content":"app-update-required".equals(result)?"APP UPDATE REQUIRED · offline reading still works":
+                version>0?"VERIFIED · content version "+version+" · QA changed one Thiruppavai line":
+                "NOT CHECKED · bundled offline copy";
+            add(qa,text("Content QA status: "+status,13,fg(),true));
+        }catch(Exception ex){add(qa,text("Content test: unable to read update status",12,muted(),false));}
         String gate=getSharedPreferences("content-settings",MODE_PRIVATE).getString("update-required",null);
         if(gate!=null){LinearLayout warning=card(body);add(warning,text("App update required for new content",16,ac(),true));
             add(warning,text("You can keep reading the saved offline edition. New content needs a newer app version.",13,fg(),false));

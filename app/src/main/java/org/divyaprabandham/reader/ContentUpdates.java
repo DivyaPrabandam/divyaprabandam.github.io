@@ -75,6 +75,7 @@ final class ContentUpdates {
         return new File(active,"complete").isFile()?active:null;
     }
     JSONArray activeBooks()throws Exception{JSONObject m=metadata();return m==null?null:m.getJSONArray("books");}
+    int activeVersion()throws Exception{JSONObject m=metadata();return m==null?0:m.getInt("contentVersion");}
     File imageFile(String imageId){if(!imageId.matches("[a-zA-Z0-9_-]{1,80}"))return null;
         File f=new File(new File(snapshots,"images"),imageId+".jpg");return f.isFile()?f:null;}
     JSONObject metadata()throws Exception{
@@ -149,7 +150,7 @@ final class ContentUpdates {
             if(header==null)throw new SecurityException("Unsigned manifest");
             verifySignature(payload,android.util.Base64.decode(header,android.util.Base64.DEFAULT),PUBLIC_KEY_X509_BASE64);
             String result=activate(validateManifest(new JSONObject(new String(payload,StandardCharsets.UTF_8))),payload);
-            context.getSharedPreferences("content-settings",0).edit().putLong("last-good-check",System.currentTimeMillis()).apply();
+            context.getSharedPreferences("content-settings",0).edit().putLong("last-good-check",System.currentTimeMillis()).putString("last-result",result).remove("last-error").apply();
             if(("updated".equals(result)||"current".equals(result))&&imageDownloadAllowed())syncImages(manifestForImages());
             return result;
         }finally{conn.disconnect();}
