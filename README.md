@@ -15,8 +15,9 @@ Verification so far: Gradle debug build passes, manifest identifies SDK floor; m
 ## Local next-step branch (not in the committed alpha)
 
 After the first pinned alpha was handed off, a separate, approval-pending branch added:
-- Private manual read marks and a 25-book journey view. No streaks or leaderboard; the two long madals are one source passage each.
-- Global search moved off the UI thread to a single worker, with 240 ms input debounce and 20-result cap. It still needs real-device latency testing before a release claim.
+- Private manual read marks, a 25-book journey view, and saved pasurams. No streaks or leaderboard; the two long madals are one source passage each.
+- Global search moved off the UI thread to a single worker, with 240 ms input debounce, an in-memory source-text index, and 20-result cap. It still needs real-device latency testing before a release claim.
+- Reversible Focus control and an elder display mode (larger type/controls). Both need real-device visual QA in all four themes.
 
 The first version in the repo and the current local workspace may differ. Confirm a repository commit before offering an APK link, and confirm the device screenshot is from that same commit.
 
