@@ -1,35 +1,57 @@
 #!/usr/bin/env python3
-"""Package the user's square artwork full-bleed as Android launcher icons.
+"""Build two Android launchers from the user's unchanged artwork.
 
-The original image is scaled only. Launcher masks may crop its corners.
+A: full painting with legacy rounded corners. B: masked original RGB pixels
+for the figure and deity on transparent foreground. No generated painting.
 """
 from pathlib import Path
-from PIL import Image, ImageDraw
+from PIL import Image,ImageDraw
 
-ROOT = Path(__file__).resolve().parents[1]
-RES = ROOT/'app/src/main/res'
-OUT = ROOT/'design'
-SOURCE = OUT/'source/user-provided-icon.jpg'
-BACKGROUND = '#4b2818'
-MASTER = 864
+ROOT=Path(__file__).resolve().parents[1]
+RES=ROOT/'app/src/main/res'
+OUT=ROOT/'design'
+SOURCE=OUT/'source/user-provided-icon.jpg'
+CUTOUT=OUT/'figure-cutout.png'
+MASTER=864
+image=Image.open(SOURCE).convert('RGB')
+assert image.size==(640,640), 'Recheck source artwork before regenerating'
+full=image.resize((MASTER,MASTER),Image.Resampling.LANCZOS)
+cut=Image.open(CUTOUT).convert('RGBA')
+assert cut.size==(640,640)
+bounds=cut.getchannel('A').getbbox()
+assert bounds is not None
+# Center the complete cutout including staff, pennant and feet in the adaptive
+# 72/108dp guaranteed visible disc. No painting pixels are recolored.
+figure=cut.crop(bounds)
+max_extent=MASTER*0.63
+ratio=min(max_extent/figure.width,max_extent/figure.height)
+figure=figure.resize((round(figure.width*ratio),round(figure.height*ratio)),Image.Resampling.LANCZOS)
+foreground=Image.new('RGBA',(MASTER,MASTER),(0,0,0,0))
+foreground.alpha_composite(figure,((MASTER-figure.width)//2,(MASTER-figure.height)//2))
 
-image = Image.open(SOURCE).convert('RGB')
-assert image.size == (640,640), 'Recheck source artwork before regenerating'
+def rounded(canvas,radius):
+    mask=Image.new('L',canvas.size);ImageDraw.Draw(mask).rounded_rectangle((0,0,canvas.width-1,canvas.height-1),radius=radius,fill=255)
+    out=canvas.copy().convert('RGBA');out.putalpha(mask);return out
 
-master = image.resize((MASTER,MASTER),Image.Resampling.LANCZOS)
+def circle(canvas):
+    mask=Image.new('L',canvas.size);ImageDraw.Draw(mask).ellipse((0,0,canvas.width-1,canvas.height-1),fill=255)
+    out=canvas.copy().convert('RGBA');out.putalpha(mask);return out
+
 for density,px in [('mdpi',108),('hdpi',162),('xhdpi',216),('xxhdpi',324),('xxxhdpi',432)]:
     path=RES/('mipmap-'+density);path.mkdir(exist_ok=True)
-    master.resize((px,px),Image.Resampling.LANCZOS).save(path/'ic_launcher_foreground.png')
+    full.resize((px,px),Image.Resampling.LANCZOS).save(path/'ic_launcher_foreground.png')
+    foreground.resize((px,px),Image.Resampling.LANCZOS).save(path/'ic_launcher_cutout_foreground.png')
 for density,px in [('mdpi',48),('hdpi',72),('xhdpi',96),('xxhdpi',144),('xxxhdpi',192)]:
     path=RES/('mipmap-'+density)
-    flat=master.resize((px,px),Image.Resampling.LANCZOS)
-    flat.save(path/'ic_launcher.png')
-    mask=Image.new('L',(px,px));ImageDraw.Draw(mask).ellipse((0,0,px-1,px-1),fill=255)
-    flat.putalpha(mask)
-    flat.save(path/'ic_launcher_round.png')
-master.resize((512,512),Image.Resampling.LANCZOS).save(OUT/'launcher-icon-preview.png')
-# Simulate a round adaptive launcher mask over the full-bleed foreground.
-# The 72dp disc is the guaranteed visible zone of its 108dp canvas.
-mask=Image.new('L',(MASTER,MASTER));ImageDraw.Draw(mask).ellipse((144,144,720,720),fill=255)
-round_icon=master.copy().convert('RGBA');round_icon.putalpha(mask)
-round_icon.crop((144,144,720,720)).resize((48,48),Image.Resampling.LANCZOS).save(OUT/'launcher-adaptive-48px-preview.png')
+    fullscaled=full.resize((px,px),Image.Resampling.LANCZOS)
+    rounded(fullscaled,round(px*.17)).save(path/'ic_launcher.png')
+    circle(fullscaled).save(path/'ic_launcher_round.png')
+    figure_scaled=foreground.resize((px,px),Image.Resampling.LANCZOS)
+    figure_scaled.save(path/'ic_launcher_cutout.png')
+    figure_scaled.save(path/'ic_launcher_cutout_round.png')
+rounded(full,round(MASTER*.17)).resize((512,512),Image.Resampling.LANCZOS).save(OUT/'launcher-icon-preview.png')
+foreground.resize((512,512),Image.Resampling.LANCZOS).save(OUT/'launcher-cutout-preview.png')
+# For actual round-launcher size show the full adaptive circle with the cutout
+# inside it, not a falsely enlarged crop of the guaranteed-safe center.
+small=foreground.resize((48,48),Image.Resampling.LANCZOS)
+circle(small).save(OUT/'launcher-cutout-round-48px-preview.png')
