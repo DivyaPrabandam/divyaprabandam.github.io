@@ -10,7 +10,7 @@ Core milestone: Home, 25 prabandhams covering numbered pasurams 1-4000, offline 
 
 No audio playback, meanings, maps or sourced devotional images are implemented yet. Other approved screens remain staged in the roadmap. Add cited meanings and tested audio in later milestones. Image/photo choices are still pending user review. Keep the same navigation and behaviour across themes. No auto-correction of devotional text.
 
-Verification so far: Gradle debug build passes, manifest identifies SDK floor; manifest validation finds all 4,000 numbers once with no gaps. Real Android UI screenshot and interactive QA are still required before an installable alpha can be offered for use. A software API 29 emulator did start but its full boot/Package Manager did not become responsive under this host's 2 GB RAM and no KVM; Android 12 and 17 interactive QA remains open.
+Verification: Gradle debug build and 4,000-number asset checks pass. The user tested the preceding QA APK on Xiaomi 15 / Android 16: the four themes, index, reader, journey and correction entry were visible in a recording; Saved survived a force-close. This copy-only follow-up has not been visually checked on the phone. The local 2 GB host has no KVM, so API 12/17 runtime tests remain open. Corrections submission/retry still needs end-to-end verification against the live Worker.
 
 ## Local next-step branch (not in the committed alpha)
 
@@ -21,7 +21,7 @@ After the first pinned alpha was handed off, a separate, approval-pending branch
 
 The first version in the repo and the current local workspace may differ. Confirm a repository commit before offering an APK link, and confirm the device screenshot is from that same commit.
 
-This branch is isolated from the pinned API 29 alpha. The 2026 Android 17 SDK setup guide specifies API 37: https://developer.android.com/about/versions/17/setup-sdk. Setting compile/target 37 does not prove runtime compatibility without a device test. MinSdk 31 excludes Android 10/11 that the earlier five-year buffer included; owner to confirm at the morning review.
+This branch is isolated from the pinned API 29 alpha. The 2026 Android 17 SDK setup guide specifies API 37: https://developer.android.com/about/versions/17/setup-sdk. Setting compile/target 37 does not prove runtime compatibility without a device test. MinSdk 31 excludes Android 10/11 that the earlier five-year buffer included; This tradeoff was surfaced at the morning review.
 
 ## Approval-pending corrections
 

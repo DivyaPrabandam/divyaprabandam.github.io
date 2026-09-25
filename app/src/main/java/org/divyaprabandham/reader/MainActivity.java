@@ -35,7 +35,7 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Alpha core reader. The devotional text is copied only from the bundled site JSON. */
+/** Offline reader. The devotional text is copied only from the bundled site JSON. */
 public final class MainActivity extends Activity {
     private static final String[] NAMES={"Sannidhi","Olai","Tulasi","Ardhajamam"};
     private static final int[][] PALETTE={
@@ -130,7 +130,7 @@ public final class MainActivity extends Activity {
             bar.addView(link,new LinearLayout.LayoutParams(0,dp(elderMode?58:52),1));link.setOnClickListener(v->{switch(tab){case "Home":showHome();break;case "Search":showSearch();break;case "Recite":showBooks();break;default:showNotice(tab);}});
         }
     }
-    private void showHome(){page="Home";start("Divya Prabandham","Offline reader · first milestone","Home");
+    private void showHome(){page="Home";start("Divya Prabandham","Offline · 25 prabandhams","Home");
         TextView invocation=text("ஸ்ரீ:",24,ac(),true);invocation.setGravity(Gravity.CENTER);pad(invocation,0,20,0,10);add(body,invocation);
         LinearLayout box=card(body);add(box,text("CONTINUE READING",11,ac(),true));
         Verse verse=verses.get(selected);TextView line=text(verse.opening(),20,fg(),false);pad(line,0,12,0,12);add(box,line);
@@ -152,7 +152,7 @@ public final class MainActivity extends Activity {
         add(card(body),button(elderMode?"Elder mode on · turn off":"Elder mode · larger text and controls",()->{
             elderMode=!elderMode;preferences.edit().putBoolean("elder",elderMode).apply();showHome();
         },elderMode));
-        add(card(body),text("All 4,000 numbered pasurams are bundled across 25 books. Meanings, audio, and other approved screens are not yet implemented.",13,muted(),false));
+        add(card(body),text("All 4,000 numbered pasurams are available offline. Audio playback is coming in the next milestone.",13,muted(),false));
     }
     private void showBooks(){page="Books";start("The 4,000 pasurams","25 prabandhams · offline","Recite");
         try{for(int i=0;i<books.length();i++){final int idx=i;JSONObject meta=books.getJSONObject(i);LinearLayout c=card(body);
@@ -203,7 +203,7 @@ public final class MainActivity extends Activity {
         LinearLayout move=card(body);LinearLayout buttons=new LinearLayout(this);add(move,buttons);
         Button previous=button("‹ Previous",()->showReader(selected-1),false);previous.setEnabled(selected>0);buttons.addView(previous,new LinearLayout.LayoutParams(0,dp(48),1));
         Button next=button("Next ›",()->showReader(selected+1),true);next.setEnabled(selected<verses.size()-1);buttons.addView(next,new LinearLayout.LayoutParams(0,dp(48),1));
-        if(!focused)add(card(body),text("Audio is not packaged in this alpha. Playback will come in a tested later milestone.",11,muted(),false));
+        if(!focused)add(card(body),text("Audio playback is coming in the next milestone.",11,muted(),false));
     }
     private EditText correctionInput(String label,String value,int max,LinearLayout container){
         TextView heading=text(label,13,fg(),true);pad(heading,0,12,0,0);add(container,heading);
@@ -425,7 +425,7 @@ public final class MainActivity extends Activity {
     private boolean hasBookmarkInRange(int first,int last){for(int n=first;n<=last;n++)if(bookmarked(n))return true;return false;}
     private void showJourney(){page="Journey";start("My 4,000 journey","Private on this device · no streaks","Home");
         int total=readCount();LinearLayout overview=card(body);add(overview,text(total+" marks across 4,000 numbered pasurams",23,ac(),true));
-        add(overview,text("The two long madals count as one complete passage each in this alpha. Audio playback does not change this count.",13,muted(),false));
+        add(overview,text("The two long madals count as one complete source passage each. Audio playback will not change this count.",13,muted(),false));
         try{for(int i=0;i<books.length();i++){JSONObject meta=books.getJSONObject(i);int n=0;
             for(int id=meta.getInt("start");id<=meta.getInt("end");id++)if(isRead(id))n++;
             LinearLayout c=card(body);add(c,text(meta.getString("name"),17,fg(),true));
@@ -436,7 +436,7 @@ public final class MainActivity extends Activity {
         }}catch(Exception e){throw new IllegalStateException("Journey book metadata unavailable",e);}
     }
     private void showNotice(String tab){page=tab;start(tab,"Coming after the core reader",""+tab);
-        add(card(body),text("This is an early build. The approved "+tab.toLowerCase(Locale.ROOT)+" screens are not yet implemented. The reading experience remains usable offline.",15,fg(),false));
+        add(card(body),text("The "+tab.toLowerCase(Locale.ROOT)+" screens are coming in a later update. Reading works offline.",15,fg(),false));
     }
     @Override protected void onDestroy(){searchGeneration++;mainHandler.removeCallbacksAndMessages(null);if(currentSearch!=null)currentSearch.cancel(true);searchWorker.shutdownNow();correctionWorker.shutdownNow();super.onDestroy();}
     @Override public void onBackPressed(){if(page.equals("Reader"))showIndex();else if(page.equals("Recite"))showBooks();else showHome();}
