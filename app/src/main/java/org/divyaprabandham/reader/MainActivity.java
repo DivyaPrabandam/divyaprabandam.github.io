@@ -276,7 +276,8 @@ public final class MainActivity extends Activity {
     private void enterCorrectionMode(){
         new AlertDialog.Builder(this).setTitle("Correction mode")
             .setMessage("Correction controls are highlighted while this mode is on. Reading text is unchanged. Reports cannot be sent from this build yet.")
-            .setPositiveButton("Continue",(d,w)->{correctionMode=true;if(page.equals("Reader"))showReader(selected);else showHome();})
+            .setPositiveButton("Continue",(d,w)->{correctionMode=true;if(page.equals("Reader"))showReader(selected);else showHome();
+                CorrectionIntro.show(this);})
             .setNegativeButton("Cancel",null).show();
     }
     private void exitCorrectionMode(){correctionMode=false;
