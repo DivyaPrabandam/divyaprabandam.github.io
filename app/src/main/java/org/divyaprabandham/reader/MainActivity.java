@@ -3,8 +3,6 @@ package org.divyaprabandham.reader;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
-import android.content.ComponentName;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -186,28 +184,10 @@ public final class MainActivity extends Activity {
         LinearLayout choices=new LinearLayout(this);pad(choices,0,10,0,0);add(themes,choices);
         for(int i=0;i<NAMES.length;i++){final int t=i;Button pick=button(NAMES[i],()->{theme=t;preferences.edit().putInt("theme",theme).apply();showHome();},i==theme);
             pick.setTextSize(10);choices.addView(pick,new LinearLayout.LayoutParams(0,dp(48),1));}
-        LinearLayout icons=card(body);add(icons,text("App icon",14,fg(),true));
-        add(icons,text("Choose the full rounded painting or your Ramanujar-and-deity image with its background removed. Some launchers take a moment to update.",12,muted(),false));
-        boolean cutoutIcon=preferences.getBoolean("cutout-launcher",false);
-        add(icons,button(cutoutIcon?"Use rounded full painting":"Rounded full painting selected",()->setLauncherIcon(false),!cutoutIcon));
-        add(icons,button(cutoutIcon?"Figure icon selected":"Use figure icon",()->setLauncherIcon(true),cutoutIcon));
         add(card(body),button(elderMode?"Elder mode on · turn off":"Elder mode · larger text and controls",()->{
             elderMode=!elderMode;preferences.edit().putBoolean("elder",elderMode).apply();showHome();
         },elderMode));
         add(card(body),text("All 4,000 numbered pasurams are available offline. Audio playback is coming in the next milestone.",13,muted(),false));
-    }
-    private void setLauncherIcon(boolean cutout){
-        PackageManager pm=getPackageManager();
-        ComponentName chosen=new ComponentName(this,cutout?"org.divyaprabandham.reader.CutoutLauncher":"org.divyaprabandham.reader.FullPaintingLauncher");
-        ComponentName other=new ComponentName(this,cutout?"org.divyaprabandham.reader.FullPaintingLauncher":"org.divyaprabandham.reader.CutoutLauncher");
-        try{
-            // Enable before disabling, so a failed second step never leaves no launcher.
-            pm.setComponentEnabledSetting(chosen,PackageManager.COMPONENT_ENABLED_STATE_ENABLED,PackageManager.DONT_KILL_APP);
-            pm.setComponentEnabledSetting(other,PackageManager.COMPONENT_ENABLED_STATE_DISABLED,PackageManager.DONT_KILL_APP);
-            preferences.edit().putBoolean("cutout-launcher",cutout).apply();
-            showHome();Toast.makeText(this,"Icon may take a moment to update on your launcher",Toast.LENGTH_SHORT).show();
-        }catch(Exception ex){android.util.Log.w("LauncherIcon","Could not change icon",ex);
-            Toast.makeText(this,"Could not switch app icon",Toast.LENGTH_LONG).show();}
     }
     private void showBooks(){page="Books";start("The 4,000 pasurams","25 prabandhams · offline","Recite");
         int shown=0;
