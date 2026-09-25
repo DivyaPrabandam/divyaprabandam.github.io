@@ -19,8 +19,9 @@ import java.io.InputStream;
 /** Skippable, full-song opening using the owner's selected images and recording. */
 public final class LaunchIntro extends Activity {
     private static final String[] FRAMES={"01.jpg","02.jpg","04.jpg"};
-    // The owner omitted image 03; image 04 is cued for around the six-second mark.
-    private static final long[] START_MS={0,2900,5700};
+    // Owner omitted image 03. Image 04 must be fully visible at the sung second
+    // "Venkata Ramana" onset around 3.4s, rather than the earlier estimated 6s.
+    private static final long[] START_MS={0,1500,3150};
     private static final long FADE_MS=300;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private MediaPlayer player;
