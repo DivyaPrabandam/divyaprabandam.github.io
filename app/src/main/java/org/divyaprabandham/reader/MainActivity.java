@@ -41,10 +41,12 @@ public final class MainActivity extends Activity {
     private SharedPreferences preferences;
     private LinearLayout root, body, bar;
     private int theme=0, selected=0, textSize=21;
+    private long lastSearchElapsedMs=0;
     private android.os.Handler mainHandler=new android.os.Handler(android.os.Looper.getMainLooper());
     private String page="Home";
     private boolean focusMode=false;
     private boolean elderMode=false;
+
     private boolean transliteration=false;
     private boolean isRead(int n){return preferences.getBoolean("read-"+n,false);}
     private void markRead(int n,boolean value){preferences.edit().putBoolean("read-"+n,value).apply();}
@@ -93,11 +95,10 @@ public final class MainActivity extends Activity {
         getWindow().getDecorView().setSystemUiVisibility(theme==1||theme==2?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0);
         root=column();root.setBackgroundColor(bg());
         root.setOnApplyWindowInsetsListener((v,insets)->{
-            // Handle forced edge-to-edge at target 37, without double-padding older system layouts.
-            boolean laidOutEdgeToEdge=(getWindow().getDecorView().getSystemUiVisibility()&View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)!=0 || Build.VERSION.SDK_INT>=35;
-            root.setPadding(0,laidOutEdgeToEdge?insets.getSystemWindowInsetTop():0,0,
-                laidOutEdgeToEdge?insets.getSystemWindowInsetBottom():0);
-            return insets.consumeSystemWindowInsets();
+            // Android 15+ enforces edge-to-edge at this target SDK; older releases lay out below bars.
+            if(Build.VERSION.SDK_INT>=35)root.setPadding(0,insets.getSystemWindowInsetTop(),0,insets.getSystemWindowInsetBottom());
+            else root.setPadding(0,0,0,0);
+            return insets;
         });
         setContentView(root);
         TextView heading=text(title,27,fg(),true);pad(heading,20,15,20,0);add(root,heading);
@@ -231,6 +232,7 @@ public final class MainActivity extends Activity {
         SearchResult(ArrayList<Match> matches,boolean more){this.matches=matches;this.more=more;}
     }
     private SearchResult findMatches(String query)throws Exception {
+        long started=android.os.SystemClock.elapsedRealtime();
         String q=query.trim().toLowerCase(Locale.ROOT);boolean numeric=q.matches("[0-9]{1,4}");int queryNumber=numeric?Integer.parseInt(q):-1;
         ArrayList<Match> matches=new ArrayList<>();boolean more=false;
         for(SearchEntry entry:getSearchIndex()){
@@ -239,7 +241,7 @@ public final class MainActivity extends Activity {
             if(matches.size()>=20){more=true;break;}
             matches.add(new Match(entry.book,entry.number,entry.last,entry.opening,entry.name,entry.alvar));
         }
-        return new SearchResult(matches,more);
+        lastSearchElapsedMs=android.os.SystemClock.elapsedRealtime()-started;android.util.Log.d("PrabandhamSearch","elapsedMs="+lastSearchElapsedMs+" queryLength="+q.length());return new SearchResult(matches,more);
     }
     private void renderSearchMatches(LinearLayout target,ArrayList<Match> matches,boolean more,String query,int generation){
         if(generation!=searchGeneration)return;target.removeAllViews();
