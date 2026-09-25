@@ -35,6 +35,8 @@ final class ContentUpdates {
     static final int MAX_MANIFEST=65536,MAX_BOOK=2_000_000,MAX_LIBRARY=16_000_000;
     private static final long EIGHT_HOURS_MS=8L*60*60*1000;
     private static final String WORK="verified-content-every-8h";
+    // The launch check, scheduled worker and manual check share snapshot storage.
+    private static final Object CHECK_LOCK=new Object();
     private static final int MAX_IMAGES_CACHED=50,MAX_IMAGE_CACHE_BYTES=24_000_000;
     private static final int MAX_IMAGES_PER_WIFI_PASS=8,MAX_IMAGES_PER_CELL_PASS=2;
     private static final int MAX_IMAGE_BYTES_PER_WIFI_PASS=6_000_000,MAX_IMAGE_BYTES_PER_CELL_PASS=600_000;
@@ -160,9 +162,13 @@ final class ContentUpdates {
         }
         for(int n=1;n<=4000;n++)if(!seen[n])throw new IllegalArgumentException("Missing pasuram "+n);
     }
-    String check()throws Exception{
+    String check()throws Exception{return check(false);}
+    String check(boolean force)throws Exception{
+        synchronized(CHECK_LOCK){return checkLocked(force);}
+    }
+    private String checkLocked(boolean force)throws Exception{
         if(!configured())return "unconfigured";
-        if(!checkDue())return "not-due";
+        if(!force&&!checkDue())return "not-due";
         HttpURLConnection conn=(HttpURLConnection)new URL(MANIFEST_URL).openConnection();conn.setInstanceFollowRedirects(false);conn.setConnectTimeout(10000);conn.setReadTimeout(10000);
         conn.setRequestProperty("User-Agent","DivyaPrabandham-Android-QA/0.3");
         try{

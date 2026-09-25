@@ -69,6 +69,7 @@ public final class MainActivity extends Activity {
     private boolean focusMode=false;
     private boolean correctionMode=false;
     private boolean elderMode=false;
+    private boolean manualCheckRunning=false;
     private boolean bookmarked(int n){return preferences.getBoolean("saved-"+n,false);}
     private void setBookmark(int n,boolean value){preferences.edit().putBoolean("saved-"+n,value).apply();}
 
@@ -174,7 +175,7 @@ public final class MainActivity extends Activity {
             bar.addView(link,new LinearLayout.LayoutParams(0,dp(elderMode?58:52),1));link.setOnClickListener(v->{switch(tab){case "Home":showHome();break;case "Search":showSearch();break;case "Recite":showBooks();break;default:showNotice(tab);}});
         }
     }
-    private void showHome(){page="Home";start("Divya Prabandham","Offline · 25 prabandhams","Home");
+    private void showHome(){page="Home";start("Divya Prabandham","Available offline · 25 prabandhams","Home");
         if(ContentUpdates.configured()){
             try{int version=contentUpdates.activeVersion();LinearLayout status=card(body);
                 add(status,text(version>0?"Reading text · verified update "+version:"Reading text · offline edition",13,fg(),true));
@@ -439,7 +440,9 @@ public final class MainActivity extends Activity {
         }catch(Exception ex){add(card(body),text("Could not read reports on this device.",13,muted(),false));}
     }
         private void showContentSettings(){page="ContentSettings";start("Content settings","Automatic updates · every 8 hours","Home");
-        add(card(body),text("Reading text updates automatically when the phone has data. The saved offline edition always remains available. There is no manual check button.",14,fg(),false));
+        add(card(body),text("Reading text checks automatically every 8 hours when the phone has data. You can also check now. The saved edition remains available offline.",14,fg(),false));
+        add(card(body),button(manualCheckRunning?"Checking for text updates…":"Check for text updates",this::checkContentNow,!manualCheckRunning));
+        if(manualCheckRunning)add(card(body),text("Checking the publisher and verifying the update. You can keep reading while this runs.",13,fg(),false));
         add(card(body),text("Images use full resolution on Wi-Fi and a lighter version on mobile data by default. Your choice below only changes image downloads.",14,fg(),false));
         android.content.SharedPreferences prefs=getSharedPreferences("content-settings",MODE_PRIVATE);
         String mode=prefs.getString("image-network","auto");String[] choices={"auto","wifi","light","off"};
@@ -448,6 +451,40 @@ public final class MainActivity extends Activity {
             prefs.edit().putString("image-network",choice).apply();showContentSettings();
         },mode.equals(choice)));}
         add(card(body),text("Images will appear here once sourced and published. Changing this setting never removes bundled reading text.",12,muted(),false));
+    }
+    private void checkContentNow(){
+        if(manualCheckRunning)return;
+        manualCheckRunning=true;showContentSettings();
+        // Force bypasses only the eight-hour timer. The same signed-manifest,
+        // schema, checksum and offline-fallback checks still apply.
+        updateWorker.execute(()->{
+            String result=null;Exception failure=null;
+            try{result=contentUpdates.check(true);}
+            catch(Exception ex){failure=ex;android.util.Log.w("ContentUpdates","Manual check deferred",ex);}
+            final String outcome=result;final Exception error=failure;
+            runOnUiThread(()->{
+                manualCheckRunning=false;if(isFinishing()||isDestroyed())return;
+                if(error!=null){
+                    getSharedPreferences("content-settings",MODE_PRIVATE).edit().putString("last-error",error.getClass().getSimpleName()).apply();
+                    Toast.makeText(this,"Couldn't check now. Saved reading text is still available.",Toast.LENGTH_LONG).show();
+                }else if("updated".equals(outcome)){
+                    try{JSONArray refreshed=contentUpdates.activeBooks();if(refreshed!=null){
+                        int number=verses.isEmpty()?0:verses.get(Math.min(selected,verses.size()-1)).number;
+                        books=refreshed;searchIndex=null;loadBook(bookIndex);selected=0;
+                        for(int i=0;i<verses.size();i++)if(verses.get(i).number==number){selected=i;break;}
+                    }}catch(Exception ex){android.util.Log.w("ContentUpdates","Updated index display deferred",ex);}
+                    Toast.makeText(this,"Verified text update installed.",Toast.LENGTH_LONG).show();
+                }else if("current".equals(outcome)){
+                    Toast.makeText(this,"Text is up to date (verified update).",Toast.LENGTH_LONG).show();
+                }else if("app-update-required".equals(outcome)){
+                    Toast.makeText(this,"A newer app is needed for this text update.",Toast.LENGTH_LONG).show();
+                }else{
+                    Toast.makeText(this,"No text update was installed. Saved text is available.",Toast.LENGTH_LONG).show();
+                }
+                if("ContentSettings".equals(page))showContentSettings();
+                else if("Home".equals(page))showHome();
+            });
+        });
     }
     private void showAppUpdate(){
         String value=getSharedPreferences("content-settings",MODE_PRIVATE).getString("update-required",null);
