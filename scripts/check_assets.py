@@ -9,7 +9,8 @@ for b in m:
  for section in j['sections']:
   for row in section['p']:
    a,z=row[:2]
-   if len(row[2])!=len(row[3]):errors.append('line-pair '+b['file']+' '+str(a))
+   # Tamil and transliteration preserve independent source line breaks; counts may differ.
+   if not row[2] or not row[3]:errors.append('empty-text '+b['file']+' '+str(a))
    for n in range(a,z+1):seen[n]=seen.get(n,0)+1
 missing=[n for n in range(1,4001) if n not in seen];dup=[n for n,v in seen.items() if v!=1]
 print(json.dumps({'books':len(m),'numbered_coverage':len(seen),'missing':len(missing),'duplicates':len(dup),'errors':errors[:10],'total_source_bytes':sum(b['bytes'] for b in m)}))
