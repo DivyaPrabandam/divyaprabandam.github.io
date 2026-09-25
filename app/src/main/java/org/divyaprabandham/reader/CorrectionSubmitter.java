@@ -17,7 +17,8 @@ import java.nio.charset.StandardCharsets;
 final class CorrectionSubmitter {
     private static final String ENDPOINT="https://fix.divyaprabandam.workers.dev/submit";
     // App identifier, not a credential. Server-side caps, honeypot and dedupe still apply.
-    private static final String APP_ID="dpapp_9fc60bd17dee7b9b4723ca9d5e8d2954";
+    // No active app identifier is bundled. A future QA build needs secure injection.
+    private static final String APP_ID="";
     private static final int JOB_ID=47921;
     // Re-enable only after the Worker app-key exemption passes live QA.
     static boolean enabled(){return false;}
