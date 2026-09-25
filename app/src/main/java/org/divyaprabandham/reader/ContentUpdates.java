@@ -38,8 +38,9 @@ final class ContentUpdates {
     private static final int MAX_IMAGES_CACHED=50,MAX_IMAGE_CACHE_BYTES=24_000_000;
     private static final int MAX_IMAGES_PER_WIFI_PASS=8,MAX_IMAGES_PER_CELL_PASS=2;
     private static final int MAX_IMAGE_BYTES_PER_WIFI_PASS=6_000_000,MAX_IMAGE_BYTES_PER_CELL_PASS=600_000;
-    // Contract pending: intentionally no live manifest URL or public key in this build.
-    private static final String MANIFEST_URL="",PUBLIC_KEY_X509_BASE64="";
+    // QA-only publisher fixture. NEVER point a production APK at this synthetic-test text.
+    private static final String MANIFEST_URL="https://publisher-test.divyaprabandam.workers.dev/manifest";
+    private static final String PUBLIC_KEY_X509_BASE64="MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEn2AwFrL5n9/XoEQH1O+VBgDAfiaJ+1d8uKp69BES9pyKl9t7Q9MqMt3kCfzveFWSqOfJkFS5Me98Ovk0R/VpOA==";
     static boolean configured(){return !MANIFEST_URL.isEmpty()&&!PUBLIC_KEY_X509_BASE64.isEmpty();}
     private final Context context;
     private final File snapshots;
@@ -141,6 +142,7 @@ final class ContentUpdates {
         if(!configured())return "unconfigured";
         if(!checkDue())return "not-due";
         HttpURLConnection conn=(HttpURLConnection)new URL(MANIFEST_URL).openConnection();conn.setInstanceFollowRedirects(false);conn.setConnectTimeout(10000);conn.setReadTimeout(10000);
+        conn.setRequestProperty("User-Agent","DivyaPrabandham-Android-QA/0.3");
         try{
             int status=conn.getResponseCode();if(status!=200)throw new IllegalStateException("Manifest HTTP "+status);
             byte[] payload=readBounded(conn.getInputStream(),MAX_MANIFEST);String header=conn.getHeaderField("X-Content-Signature");
@@ -204,6 +206,10 @@ final class ContentUpdates {
                 if(destination.isFile()&&sha256(readBounded(destination,MAX_BOOK)).equals(b.getString("sha256")))continue;
                 byte[] data=null;File previous=current==null?null:new File(current,name);
                 if(previous!=null&&previous.isFile()){byte[] old=readBounded(previous,MAX_BOOK);if(old.length==b.getInt("bytes")&&sha256(old).equals(b.getString("sha256")))data=old;}
+                if(data==null){String originalName=bundledName(b.getString("id"));
+                    if(originalName!=null)try(InputStream bundled=context.getAssets().open("books/"+originalName)){byte[] original=readBounded(bundled,MAX_BOOK);
+                    if(original.length==b.getInt("bytes")&&sha256(original).equals(b.getString("sha256")))data=original;
+                }catch(java.io.FileNotFoundException ignored){}}
                 if(data==null)data=download(b.getString("url"),b.getInt("bytes"));
                 if(data.length!=b.getInt("bytes")||!sha256(data).equals(b.getString("sha256")))throw new SecurityException("Download checksum mismatch");
                 writeFile(destination,data);
@@ -219,11 +225,17 @@ final class ContentUpdates {
             return "updated";
         }catch(Exception ex){deleteTree(stage);throw ex;}
     }
+    private String bundledName(String id)throws Exception{
+        JSONArray original=new JSONArray(new String(readBounded(context.getAssets().open("books/manifest.json"),MAX_MANIFEST),StandardCharsets.UTF_8));
+        for(int i=0;i<original.length();i++)if(id.equals(original.getJSONObject(i).getString("id")))return original.getJSONObject(i).getString("file");
+        return null;
+    }
     private static void writeFile(File file,byte[] bytes)throws Exception{try(FileOutputStream out=new FileOutputStream(file)){out.write(bytes);out.getFD().sync();}}
     private static void deleteTree(File file){if(file.isDirectory()){File[] children=file.listFiles();if(children!=null)for(File child:children)deleteTree(child);}file.delete();}
     private static byte[] download(String url,int expected)throws Exception{
         if(!url.startsWith("https://"))throw new SecurityException("Insecure resource URL");
         HttpURLConnection conn=(HttpURLConnection)new URL(url).openConnection();conn.setInstanceFollowRedirects(false);conn.setConnectTimeout(10000);conn.setReadTimeout(15000);
+        conn.setRequestProperty("User-Agent","DivyaPrabandham-Android-QA/0.3");
         try{if(conn.getResponseCode()!=200)throw new IllegalStateException("Resource HTTP "+conn.getResponseCode());return readBounded(conn.getInputStream(),Math.min(MAX_BOOK,expected));}
         finally{conn.disconnect();}
     }

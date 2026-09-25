@@ -143,6 +143,7 @@ public final class MainActivity extends Activity {
         }
     }
     private void showHome(){page="Home";start("Divya Prabandham","Offline · 25 prabandhams","Home");
+        add(card(body),text("QA TEST BUILD · downloaded text may contain a synthetic test correction. Do not use this edition for recitation.",12,ac(),true));
         String gate=getSharedPreferences("content-settings",MODE_PRIVATE).getString("update-required",null);
         if(gate!=null){LinearLayout warning=card(body);add(warning,text("App update required for new content",16,ac(),true));
             add(warning,text("You can keep reading the saved offline edition. New content needs a newer app version.",13,fg(),false));
