@@ -146,6 +146,11 @@ public final class MainActivity extends Activity {
             return insets;
         });
         setContentView(root);
+        if(android.animation.ValueAnimator.areAnimatorsEnabled()){
+            // One gentle transition on all in-app screens, including correction mode.
+            root.setAlpha(0.5f);root.setTranslationY(dp(8));
+            root.animate().alpha(1f).translationY(0f).setDuration(180).start();
+        }
         if(correctionMode){Button exit=button("Exit correction mode",this::exitCorrectionMode,true);
             LinearLayout top=column();top.setGravity(Gravity.RIGHT);top.setBackground(shape(surface(),18));
             LinearLayout.LayoutParams ep=new LinearLayout.LayoutParams(-2,dp(56));ep.setMargins(0,0,dp(12),0);top.addView(exit,ep);
