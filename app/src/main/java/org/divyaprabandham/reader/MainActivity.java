@@ -44,6 +44,7 @@ public final class MainActivity extends Activity {
     private android.os.Handler mainHandler=new android.os.Handler(android.os.Looper.getMainLooper());
     private String page="Home";
     private boolean focusMode=false;
+    private boolean elderMode=false;
     private boolean transliteration=false;
     private boolean isRead(int n){return preferences.getBoolean("read-"+n,false);}
     private void markRead(int n,boolean value){preferences.edit().putBoolean("read-"+n,value).apply();}
@@ -56,6 +57,7 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle saved){super.onCreate(saved);getWindow().requestFeature(Window.FEATURE_NO_TITLE);
         preferences=getSharedPreferences("reading",MODE_PRIVATE);
         theme=preferences.getInt("theme",0); selected=preferences.getInt("selected",0);textSize=preferences.getInt("size",21);
+        elderMode=preferences.getBoolean("elder",false);
         transliteration=preferences.getBoolean("transliteration",false);
         try { books=new JSONArray(readAsset("books/manifest.json")); }catch(Exception e){throw new IllegalStateException("Book index missing",e);}
         bookIndex=preferences.getInt("book",2); loadBook(bookIndex); if(selected<0||selected>=verses.size())selected=0; showHome();
@@ -79,13 +81,13 @@ public final class MainActivity extends Activity {
     private int bg(){return PALETTE[theme][0];} private int fg(){return PALETTE[theme][1];} private int ac(){return PALETTE[theme][2];} private int surface(){return PALETTE[theme][3];} private int muted(){return PALETTE[theme][4];}
     private int dp(int n){return (int)(getResources().getDisplayMetrics().density*n+.5f);}
     private GradientDrawable shape(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
-    private TextView text(String str,int sp,int color,boolean bold){TextView t=new TextView(this);t.setText(str);t.setTextSize(sp);t.setTextColor(color);t.setLineSpacing(dp(3),1.12f);if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);return t;}
+    private TextView text(String str,int sp,int color,boolean bold){TextView t=new TextView(this);t.setText(str);t.setTextSize(elderMode?Math.max(sp,Math.min(sp+3,25)):sp);t.setTextColor(color);t.setLineSpacing(dp(3),1.12f);if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);return t;}
     private LinearLayout column(){LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);return l;}
     private void pad(View v,int a,int b,int c,int d){v.setPadding(dp(a),dp(b),dp(c),dp(d));}
     private void add(LinearLayout into,View child){into.addView(child,new LinearLayout.LayoutParams(-1,-2));}
     private LinearLayout card(LinearLayout into){LinearLayout c=column();c.setBackground(shape(surface(),theme==1?8:18));pad(c,16,15,16,15);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(dp(16),dp(8),dp(16),dp(4));into.addView(c,p);return c;}
-    private Button button(String label,Runnable run,boolean strong){Button b=new Button(this);b.setText(label);b.setTextSize(12);b.setAllCaps(false);b.setMinimumHeight(dp(48));b.setTextColor(strong?bg():ac());b.setBackground(shape(strong?ac():surface(),theme==1?7:23));b.setOnClickListener(v->run.run());return b;}
+    private Button button(String label,Runnable run,boolean strong){Button b=new Button(this);b.setText(label);b.setTextSize(elderMode?15:12);b.setAllCaps(false);b.setMinimumHeight(dp(48));b.setTextColor(strong?bg():ac());b.setBackground(shape(strong?ac():surface(),theme==1?7:23));b.setOnClickListener(v->run.run());return b;}
     private void start(String title,String subtitle,String active){
         getWindow().setStatusBarColor(bg());getWindow().setNavigationBarColor(bg());
         getWindow().getDecorView().setSystemUiVisibility(theme==1||theme==2?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0);
@@ -104,8 +106,8 @@ public final class MainActivity extends Activity {
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER);bar.setBackgroundColor(bg());pad(bar,7,8,7,8);add(root,bar);
         String[] tabs={"Home","Recite","Learn","Explore","Search"};for(String tab:tabs){
-            TextView link=text(tab,11,active.equals(tab)?ac():muted(),active.equals(tab));link.setGravity(Gravity.CENTER);link.setMinimumHeight(dp(48));
-            bar.addView(link,new LinearLayout.LayoutParams(0,dp(52),1));link.setOnClickListener(v->{switch(tab){case "Home":showHome();break;case "Search":showSearch();break;case "Recite":showBooks();break;default:showNotice(tab);}});
+            TextView link=text(tab,11,active.equals(tab)?ac():muted(),active.equals(tab));link.setGravity(Gravity.CENTER);link.setMinimumHeight(dp(elderMode?56:48));
+            bar.addView(link,new LinearLayout.LayoutParams(0,dp(elderMode?58:52),1));link.setOnClickListener(v->{switch(tab){case "Home":showHome();break;case "Search":showSearch();break;case "Recite":showBooks();break;default:showNotice(tab);}});
         }
     }
     private void showHome(){page="Home";start("Divya Prabandham","Offline reader · first milestone","Home");
@@ -125,6 +127,9 @@ public final class MainActivity extends Activity {
         LinearLayout choices=new LinearLayout(this);pad(choices,0,10,0,0);add(themes,choices);
         for(int i=0;i<NAMES.length;i++){final int t=i;Button pick=button(NAMES[i],()->{theme=t;preferences.edit().putInt("theme",theme).apply();showHome();},i==theme);
             pick.setTextSize(10);choices.addView(pick,new LinearLayout.LayoutParams(0,dp(48),1));}
+        add(card(body),button(elderMode?"Elder mode on · turn off":"Elder mode · larger text and controls",()->{
+            elderMode=!elderMode;preferences.edit().putBoolean("elder",elderMode).apply();showHome();
+        },elderMode));
         add(card(body),text("All 4,000 numbered pasurams are bundled across 25 books. Meanings, audio, and the other approved screens are not yet implemented.",13,muted(),false));
     }
     private void showBooks(){page="Books";start("The 4,000 pasurams","25 prabandhams · offline","Recite");
@@ -150,7 +155,7 @@ public final class MainActivity extends Activity {
     private void showReader(int index){selected=Math.max(0,Math.min(verses.size()-1,index));preferences.edit().putInt("selected",selected).apply();page="Reader";
         Verse v=verses.get(selected);start(bookName+" "+(selected+1),bookAlvar+" · "+(bookIndex==21?"pasurams 2673–2712":bookIndex==22?"pasurams 2713–2790":"pasuram "+v.number+" of 4,000"),"Recite");
         LinearLayout c=card(body);add(c,text(bookTamil+" · "+bookAlvar,15,ac(),true));
-        TextView verse=text(transliteration?v.latin:v.tamil,textSize,fg(),false);verse.setLineSpacing(dp(7),1.28f);pad(verse,0,22,0,20);add(c,verse);
+        TextView verse=text(transliteration?v.latin:v.tamil,textSize,fg(),false);verse.setTextSize(textSize+(elderMode?4:0));verse.setLineSpacing(dp(elderMode?12:7),elderMode?1.5f:1.28f);pad(verse,0,22,0,20);add(c,verse);
         if(bookIndex==21||bookIndex==22)add(c,text("This complete madal is one source passage covering a numbered range; individual verse boundaries are not marked in the site data.",11,muted(),false));
         if(!focusMode)
             add(c,text("Text: bundled verbatim from the site edition · recitation marks kept",11,muted(),false));
