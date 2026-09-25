@@ -106,7 +106,7 @@ public final class MainActivity extends Activity {
         setContentView(root);
         TextView heading=text(title,27,fg(),true);pad(heading,20,15,20,0);add(root,heading);
         TextView sub=text(subtitle,12,muted(),false);pad(sub,20,3,20,13);add(root,sub);
-        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setVerticalScrollBarEnabled(false);body=column();scroll.addView(body);
+        ScrollView scroll=new ScrollView(this);currentScroll=scroll;scroll.setFillViewport(true);scroll.setVerticalScrollBarEnabled(false);body=column();scroll.addView(body);
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER);bar.setBackgroundColor(bg());pad(bar,7,8,7,8);add(root,bar);
         String[] tabs={"Home","Recite","Learn","Explore","Search"};for(String tab:tabs){
@@ -143,6 +143,7 @@ public final class MainActivity extends Activity {
             c.setMinimumHeight(dp(72));c.setOnClickListener(v->{loadBook(idx);selected=0;preferences.edit().putInt("book",idx).putInt("selected",0).apply();showIndex();});
         }}catch(Exception e){throw new IllegalStateException("Book list unreadable",e);}}
     private int loadedIndexCards=0; private int searchGeneration=0;
+    private ScrollView currentScroll;
     private void showIndex(){page="Recite";start(bookName,bookAlvar+" · "+bookTamil+" · "+verses.size()+" passages","Recite");
         add(card(body),button("All prabandhams",this::showBooks,false));
         loadedIndexCards=0;appendIndexCards();
@@ -155,7 +156,7 @@ public final class MainActivity extends Activity {
         }
         loadedIndexCards=limit;
         if(limit<verses.size())add(card(body),button("Show next "+Math.min(35,verses.size()-limit)+" of "+verses.size(),()->{
-            if(body.getChildCount()>0)body.removeViewAt(body.getChildCount()-1);appendIndexCards();},false));
+            if(body.getChildCount()>0)body.removeViewAt(body.getChildCount()-1);int y=currentScroll.getScrollY();appendIndexCards();currentScroll.post(()->currentScroll.scrollTo(0,y));},false));
     }
     private void showReader(int index){selected=Math.max(0,Math.min(verses.size()-1,index));preferences.edit().putInt("selected",selected).apply();page="Reader";
         Verse v=verses.get(selected);start(bookName+" "+(selected+1),bookAlvar+" · "+(bookIndex==21?"pasurams 2673–2712":bookIndex==22?"pasurams 2713–2790":"pasuram "+v.number+" of 4,000"),"Recite");
