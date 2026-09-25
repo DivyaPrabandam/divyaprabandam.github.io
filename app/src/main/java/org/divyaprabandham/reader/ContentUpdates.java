@@ -38,9 +38,8 @@ final class ContentUpdates {
     private static final int MAX_IMAGES_CACHED=50,MAX_IMAGE_CACHE_BYTES=24_000_000;
     private static final int MAX_IMAGES_PER_WIFI_PASS=8,MAX_IMAGES_PER_CELL_PASS=2;
     private static final int MAX_IMAGE_BYTES_PER_WIFI_PASS=6_000_000,MAX_IMAGE_BYTES_PER_CELL_PASS=600_000;
-    // QA-only publisher fixture. NEVER point a production APK at this synthetic-test text.
-    private static final String MANIFEST_URL="https://publisher-test.divyaprabandam.workers.dev/manifest";
-    private static final String PUBLIC_KEY_X509_BASE64="MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEn2AwFrL5n9/XoEQH1O+VBgDAfiaJ+1d8uKp69BES9pyKl9t7Q9MqMt3kCfzveFWSqOfJkFS5Me98Ovk0R/VpOA==";
+    // Production publisher URL/key are intentionally unset until independently verified.
+    private static final String MANIFEST_URL="",PUBLIC_KEY_X509_BASE64="";
     static boolean configured(){return !MANIFEST_URL.isEmpty()&&!PUBLIC_KEY_X509_BASE64.isEmpty();}
     private final Context context;
     private final File snapshots;
@@ -52,7 +51,7 @@ final class ContentUpdates {
             .setConstraints(constraints).build();
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(WORK,ExistingPeriodicWorkPolicy.KEEP,request);
     }
-    boolean checkDue(){return System.currentTimeMillis()-context.getSharedPreferences("content-settings",0).getLong("last-good-check",0)>=EIGHT_HOURS_MS;}
+    boolean checkDue(){return configured()&&System.currentTimeMillis()-context.getSharedPreferences("content-settings",0).getLong("last-good-check",0)>=EIGHT_HOURS_MS;}
     boolean isWifi(){ConnectivityManager manager=context.getSystemService(ConnectivityManager.class);
         if(manager==null)return false;android.net.Network network=manager.getActiveNetwork();
         NetworkCapabilities caps=network==null?null:manager.getNetworkCapabilities(network);
@@ -68,6 +67,7 @@ final class ContentUpdates {
         return new String(readBounded(file,MAX_BOOK),StandardCharsets.UTF_8);
     }
     private File activeDirectory()throws Exception{
+        if(!configured())return null; // Never load an old synthetic QA snapshot into a production candidate.
         AtomicFile pointer=new AtomicFile(new File(snapshots,"active"));if(!pointer.getBaseFile().exists())return null;
         String id=new String(readBounded(pointer.openRead(),128),StandardCharsets.UTF_8).trim();
         if(!id.matches("[a-f0-9]{64}"))return null;

@@ -1,34 +1,17 @@
-# Divya Prabandham Android - core reader alpha
+# Divya Prabandham Android - v7 production candidate
 
-Native Java/View Android project, minSdk 31 (Android 12), targetSdk 37. No account or external runtime library. The approval-pending branch now includes an app identifier and Internet permission for the user-initiated corrections feature; the pinned alpha remains offline and separate. Not yet the approved 42-screen v1; do not distribute as a finished edition.
+Native Java/View Android reader, Android 12+ (minSdk 31), target/compile 37. This local branch is separate from the previously installed QA APKs and has no public release asset yet.
 
-Build with JDK 17 and Android SDK platform 37 / build tools 37:
+## Included and grounded
 
-    gradle :app:assembleDebug
+The APK bundles site-source text for 25 prabandhams with exact numbered coverage 1-4000, preserving each long madal as one unsplit source passage. Home/resume, book/index/reader, Tamil/transliteration, previous/next, four themes including AMOLED, text-size controls, elder mode, reversible Focus, private saved pasurams and manual read marks with a 25-book journey, and debounced offline global search are implemented. Text integrity: `python3 scripts/check_assets.py "$PWD"` verifies all 25 asset hashes, bytes, unique numbered coverage and nonempty text.
 
-Core milestone: Home, 25 prabandhams covering numbered pasurams 1-4000, offline book/index/reader and global search across the 4,000, Tamil and transliteration, four themes, persisted book/reading place and text size. The site's devotional text is bundled verbatim from live assets (see books/manifest.json with URLs and SHA-256 hashes); no text is generated. The two long madals are represented by one complete passage each, preserving their site's numbered ranges 2673-2712 and 2713-2790. Their internal split boundaries have not been invented.
+Content updater code validates P-256 signed manifests and per-shard hashes, downloads only changed books, stages an atomic private snapshot, keeps the APK's offline corpus as fallback, and uses an 8-hour connected WorkManager cadence. It is intentionally unconfigured in this candidate: no production publisher endpoint/public key has been verified. The old synthetic publisher-test snapshot is ignored. The app cannot claim live content updates yet. Image policy scaffolding allows full images on Wi-Fi/light images on mobile with bounded cache, but real devotional images are not yet associated or displayed.
 
-No audio playback, meanings, maps or sourced devotional images are implemented yet. Other approved screens remain staged in the roadmap. Add cited meanings and tested audio in later milestones. Image/photo choices are still pending user review. Keep the same navigation and behaviour across themes. No auto-correction of devotional text.
+Corrections submission is hard-disabled pending the rotated app-key injection, current Worker contract, and an actual phone-path test. The sheet/review queue code exists but does not send; it is not a functioning correction service in this build. Do not reactivate it by changing only the boolean.
 
-Verification: Gradle debug build and 4,000-number asset checks pass. The user tested the preceding QA APK on Xiaomi 15 / Android 16: the four themes, index, reader, journey and correction entry were visible in a recording; Saved survived a force-close. This copy-only follow-up has not been visually checked on the phone. The local 2 GB host has no KVM, so API 12/17 runtime tests remain open. Corrections submission/retry still needs end-to-end verification against the live Worker.
+No audio playback or meanings are packaged. The two long madals have no source recitation URLs and audio licensing/rights are not resolved. The agreed later roadmap includes search upgrades, per-book resume, daily notification, Margazhi mode, notes/highlights, opt-in temple visit companion, recitation-session mode and offline audio. These are not part of this v7 reading candidate. Learn/Explore remain placeholders.
 
-## Local next-step branch (not in the committed alpha)
+## Release gate
 
-After the first pinned alpha was handed off, a separate, approval-pending branch added:
-- Private manual read marks, a 25-book journey view, and saved pasurams. No streaks or leaderboard; the two long madals are one source passage each.
-- Global search moved off the UI thread to a single worker, with 240 ms input debounce, an in-memory source-text index, and 20-result cap. It still needs real-device latency testing before a release claim.
-- Reversible Focus control and an elder display mode (larger type/controls). Both need real-device visual QA in all four themes.
-
-The first version in the repo and the current local workspace may differ. Confirm a repository commit before offering an APK link, and confirm the device screenshot is from that same commit.
-
-This branch is isolated from the pinned API 29 alpha. The 2026 Android 17 SDK setup guide specifies API 37: https://developer.android.com/about/versions/17/setup-sdk. Setting compile/target 37 does not prove runtime compatibility without a device test. MinSdk 31 excludes Android 10/11 that the earlier five-year buffer included; This tradeoff was surfaced at the morning review.
-
-## Approval-pending corrections
-
-The reader's correction sheet sends only after a user taps Submit, then saves a private atomic on-device queue before trying the HTTPS endpoint. Image attachments are resized locally to at most 1600 px and must be under 1.5 MB. User-supplied source/credit is required for attached images. A network-gated persisted JobScheduler job retries queued 429, 5xx and network failures. 400/413 replies are held for review with the server's error. A response is removed only on HTTP 200 with `{"ok":true}`. The current verse's original Tamil and transliteration are sent for text diffs. Nothing automatically edits the devotional text. Submission semantics and presentation need live device and staging-server QA before release; no test submission was sent by this development task.
-
-## Content updater branch (fixture-only until publisher contract)
-
-VersionCode 4 adds a native SHA256withECDSA/P-256 manifest verifier, private atomic book snapshots, full 1-4000 number/hash/size checks, 8-hour network-gated WorkManager cadence (no foreground service, no wake lock), launch checks throttled by last successful check and skipped entirely while the publisher contract is blank, automatic launch checks, a Wi-Fi/full vs mobile/light image policy and settings, and a visible incompatible-app state. The public key, manifest URL, image associations and APK installer route remain unconfigured. This build does not fetch remote content or submit corrections; do not distribute it as a working updater. It requires a signed canonical publisher manifest, local fixture tests, phone QA and a verified app-key corrections path before release.
-
-Updater release gate: measure battery, radio use, cellular bytes and RAM on a real Android 12+ device; fixture/build tests do not satisfy this. Optional images are capped per pass (8/6MB Wi-Fi, 2/0.6MB cellular), with a 24MB/50-image on-device cache cap. No background location is part of this branch. The approved later roadmap includes opt-in temple visit companion, recitation sessions and offline audio, but none are included here.
+Build with JDK 17 and SDK 37: `ANDROID_HOME=/tmp/android-sdk JAVA_HOME=/tmp/jdk17 /tmp/gradle-root/gradle-8.13/bin/gradle :app:assembleDebug`. No direct production download link exists. Before one is created: configure a signed production publisher and verify live current text, complete corrections phone-path QA if enabling it, run real-device functional/security/battery/RAM checks on Android 12+ including the Xiaomi 15 Android 16 phone, and visually inspect all four themes. Host software emulator could not boot due no KVM, 2 GB RAM and disk requirements. The v6 phone QA confirmed the earlier book-list crash was fixed, not this new binary. Do not merge/release merely because compilation passes.

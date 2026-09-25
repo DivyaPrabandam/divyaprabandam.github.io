@@ -147,17 +147,12 @@ public final class MainActivity extends Activity {
         }
     }
     private void showHome(){page="Home";start("Divya Prabandham","Offline · 25 prabandhams","Home");
-        LinearLayout qa=card(body);add(qa,text("QA TEST BUILD · downloaded text may contain a synthetic test correction. Do not use this edition for recitation.",12,ac(),true));
-        try{int version=contentUpdates.activeVersion();
-            android.content.SharedPreferences cp=getSharedPreferences("content-settings",MODE_PRIVATE);
-            String result=cp.getString("last-result","not-checked");String problem=cp.getString("last-error",null);
-            String status=problem!=null?"FAILED · "+problem+". Offline text is still available.":
-                "checking".equals(result)?"CHECKING · waiting for verified content":"app-update-required".equals(result)?"APP UPDATE REQUIRED · offline reading still works":
-                version>0?"VERIFIED · content version "+version+" · QA changed one Thiruppavai line":
-                "NOT CHECKED · bundled offline copy";
-            add(qa,text("Content QA status: "+status,13,fg(),true));
-        }catch(Exception ex){add(qa,text("Content test: unable to read update status",12,muted(),false));}
-        String gate=getSharedPreferences("content-settings",MODE_PRIVATE).getString("update-required",null);
+        if(ContentUpdates.configured()){
+            try{int version=contentUpdates.activeVersion();LinearLayout status=card(body);
+                add(status,text(version>0?"Reading text · verified update "+version:"Reading text · offline edition",13,fg(),true));
+            }catch(Exception ex){android.util.Log.w("ContentUpdates","Status unavailable",ex);}
+        }
+        String gate=ContentUpdates.configured()?getSharedPreferences("content-settings",MODE_PRIVATE).getString("update-required",null):null;
         if(gate!=null){LinearLayout warning=card(body);add(warning,text("App update required for new content",16,ac(),true));
             add(warning,text("You can keep reading the saved offline edition. New content needs a newer app version.",13,fg(),false));
             add(warning,button("Update app",this::showAppUpdate,false));}
