@@ -38,12 +38,18 @@ final class ContentUpdates {
     private static final int MAX_IMAGES_CACHED=50,MAX_IMAGE_CACHE_BYTES=24_000_000;
     private static final int MAX_IMAGES_PER_WIFI_PASS=8,MAX_IMAGES_PER_CELL_PASS=2;
     private static final int MAX_IMAGE_BYTES_PER_WIFI_PASS=6_000_000,MAX_IMAGE_BYTES_PER_CELL_PASS=600_000;
-    // Production publisher URL/key are intentionally unset until independently verified.
-    private static final String MANIFEST_URL="",PUBLIC_KEY_X509_BASE64="";
+    // The production manifest URL is intentionally unset until the publisher is deployed.
+    // This pinned SPKI is public verification material, not a credential.
+    private static final String MANIFEST_URL="";
+    private static final String PUBLIC_KEY_X509_BASE64="MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEtu9UWY5Csac9VQXqRxY3g3P+sshwrvTQ45gKQRpyXtVoyw/QA/hxSk+H2QWplRORdZsZE6AEazZLFap8IDsrVw==";
     static boolean configured(){return !MANIFEST_URL.isEmpty()&&!PUBLIC_KEY_X509_BASE64.isEmpty();}
     private final Context context;
     private final File snapshots;
-    ContentUpdates(Context context){this.context=context.getApplicationContext();snapshots=new File(this.context.getFilesDir(),"verified-content");}
+    ContentUpdates(Context context){
+        this.context=context.getApplicationContext();
+        // Isolate signed production snapshots from any legacy synthetic QA data.
+        snapshots=new File(this.context.getFilesDir(),"verified-content-production-v1");
+    }
     static void schedule(Context context){
         if(!configured())return;
         Constraints constraints=new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();

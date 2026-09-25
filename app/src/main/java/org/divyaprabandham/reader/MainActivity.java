@@ -86,7 +86,7 @@ public final class MainActivity extends Activity {
         transliteration=preferences.getBoolean("transliteration",false);
         try { JSONArray updated=contentUpdates.activeBooks();books=updated!=null?updated:new JSONArray(readAsset("books/manifest.json")); }catch(Exception e){throw new IllegalStateException("Book index missing",e);}
         bookIndex=preferences.getInt("book",2); loadBook(bookIndex); if(selected<0||selected>=verses.size())selected=0; showHome();
-        // The publisher route and signing key are not configured in this fixture build.
+        // The production publisher route remains unset pending deploy and verification.
         if(ContentUpdates.configured()&&contentUpdates.checkDue()){
             getSharedPreferences("content-settings",MODE_PRIVATE).edit().putString("last-result","checking").remove("last-error").apply();showHome();
             updateWorker.execute(()->{try{String state=contentUpdates.check();
