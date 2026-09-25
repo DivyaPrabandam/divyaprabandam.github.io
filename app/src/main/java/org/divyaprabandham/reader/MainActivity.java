@@ -47,6 +47,8 @@ public final class MainActivity extends Activity {
     private String page="Home";
     private boolean focusMode=false;
     private boolean elderMode=false;
+    private boolean bookmarked(int n){return preferences.getBoolean("saved-"+n,false);}
+    private void setBookmark(int n,boolean value){preferences.edit().putBoolean("saved-"+n,value).apply();}
 
     private boolean transliteration=false;
     private boolean isRead(int n){return preferences.getBoolean("read-"+n,false);}
@@ -125,6 +127,7 @@ public final class MainActivity extends Activity {
         int read=readCount();add(journey,text(read+" of 4,000 marked read",17,fg(),true));
         add(journey,text("Your progress stays on this phone. Listening alone never marks a passage read.",12,muted(),false));
         add(journey,button("Open my journey",this::showJourney,false));
+        add(card(body),button("Saved pasurams",this::showSaved,false));
         LinearLayout themes=card(body);add(themes,text("Appearance · same navigation in every theme",14,fg(),true));
         LinearLayout choices=new LinearLayout(this);pad(choices,0,10,0,0);add(themes,choices);
         for(int i=0;i<NAMES.length;i++){final int t=i;Button pick=button(NAMES[i],()->{theme=t;preferences.edit().putInt("theme",theme).apply();showHome();},i==theme);
@@ -167,6 +170,9 @@ public final class MainActivity extends Activity {
             focusMode=!focusMode;showReader(selected);
         },focused));
         if(bookIndex==21||bookIndex==22)add(reading,text("For this long madal, marking read applies to the entire source passage, not each number in its range.",11,muted(),false));
+        add(reading,button(bookmarked(v.number)?"★ Saved · tap to remove":"☆ Save pasuram",()->{
+            setBookmark(v.number,!bookmarked(v.number));showReader(selected);
+        },bookmarked(v.number)));
         add(reading,button(isRead(v.number)?"✓ Marked read · tap to undo":"Mark as read",()->{
             boolean now=!isRead(v.number);markRead(v.number,now);showReader(selected);
         },isRead(v.number)));
@@ -258,6 +264,27 @@ public final class MainActivity extends Activity {
         if(matches.isEmpty())add(card(target),text("No matches in the bundled 4,000.",13,muted(),false));
         if(more)add(card(target),text("Showing the first 20 matches. Add more letters to narrow the search.",12,muted(),false));
     }
+    private void showSaved(){page="Saved";start("Saved pasurams","Private on this phone","Home");
+        int count=0;
+        try{for(int bi=0;bi<books.length();bi++){
+            JSONObject meta=books.getJSONObject(bi);if(!hasBookmarkInRange(meta.getInt("start"),meta.getInt("end")))continue;
+            JSONObject data=new JSONObject(readAsset("books/"+meta.getString("file")));
+            for(int sec=0;sec<data.getJSONArray("sections").length();sec++){
+                JSONArray rows=data.getJSONArray("sections").getJSONObject(sec).getJSONArray("p");
+                for(int i=0;i<rows.length();i++){JSONArray row=rows.getJSONArray(i);int first=row.getInt(0);
+                    if(!bookmarked(first))continue;
+                    final int book=bi,number=first;LinearLayout c=card(body);
+                    String opening=row.getJSONArray(3).getString(0);add(c,text(first+" · "+opening,16,fg(),false));
+                    add(c,text(meta.getString("name")+" · "+meta.getString("alvar"),11,muted(),false));
+                    c.setOnClickListener(v->{if(book!=bookIndex){loadBook(book);preferences.edit().putInt("book",book).apply();}
+                        for(int ix=0;ix<verses.size();ix++)if(verses.get(ix).number==number){showReader(ix);return;}});
+                    count++;
+                }
+            }
+        }}catch(Exception e){throw new IllegalStateException("Saved pasuram index unavailable",e);}
+        if(count==0)add(card(body),text("Nothing saved yet. Tap ☆ on a pasuram to keep it here.",13,muted(),false));
+    }
+    private boolean hasBookmarkInRange(int first,int last){for(int n=first;n<=last;n++)if(bookmarked(n))return true;return false;}
     private void showJourney(){page="Journey";start("My 4,000 journey","Private on this device · no streaks","Home");
         int total=readCount();LinearLayout overview=card(body);add(overview,text(total+" marks across 4,000 numbered pasurams",23,ac(),true));
         add(overview,text("The two long madals count as one complete passage each in this alpha. Audio playback does not change this count.",13,muted(),false));
