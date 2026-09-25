@@ -1,6 +1,16 @@
 package org.divyaprabandham.reader;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.Intent;
+import android.net.Uri;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.util.Base64;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
+import android.widget.Toast;
+import java.io.IOException;
 import android.os.Bundle;
 import android.os.Build;
 import android.content.SharedPreferences;
@@ -37,9 +47,14 @@ public final class MainActivity extends Activity {
     private final ArrayList<Verse> verses=new ArrayList<>();
     private JSONArray books; private int bookIndex=2; private String bookName="Thiruppavai", bookAlvar="Andal", bookTamil="திருப்பாவை";
     private final ExecutorService searchWorker=Executors.newSingleThreadExecutor();
+    private final ExecutorService correctionWorker=Executors.newSingleThreadExecutor();
     private volatile ArrayList<SearchEntry> searchIndex;
     private java.util.concurrent.Future<?> currentSearch;
     private SharedPreferences preferences;
+    private CorrectionQueue correctionQueue;
+    private String correctionImage=null;
+    private TextView correctionImageStatus;
+    private static final int PICK_CORRECTION_IMAGE=481;
     private LinearLayout root, body, bar;
     private int theme=0, selected=0, textSize=21;
     private long lastSearchElapsedMs=0;
@@ -61,6 +76,7 @@ public final class MainActivity extends Activity {
     }
     @Override public void onCreate(Bundle saved){super.onCreate(saved);getWindow().requestFeature(Window.FEATURE_NO_TITLE);
         preferences=getSharedPreferences("reading",MODE_PRIVATE);
+        correctionQueue=new CorrectionQueue(this);
         theme=preferences.getInt("theme",0); selected=preferences.getInt("selected",0);textSize=preferences.getInt("size",21);
         elderMode=preferences.getBoolean("elder",false);
         transliteration=preferences.getBoolean("transliteration",false);
@@ -128,6 +144,7 @@ public final class MainActivity extends Activity {
         add(journey,text("Your progress stays on this phone. Listening alone never marks a passage read.",12,muted(),false));
         add(journey,button("Open my journey",this::showJourney,false));
         add(card(body),button("Saved pasurams",this::showSaved,false));
+        add(card(body),button("Correction reports",this::showCorrectionReports,false));
         LinearLayout themes=card(body);add(themes,text("Appearance · same navigation in every theme",14,fg(),true));
         LinearLayout choices=new LinearLayout(this);pad(choices,0,10,0,0);add(themes,choices);
         for(int i=0;i<NAMES.length;i++){final int t=i;Button pick=button(NAMES[i],()->{theme=t;preferences.edit().putInt("theme",theme).apply();showHome();},i==theme);
@@ -171,6 +188,7 @@ public final class MainActivity extends Activity {
             focusMode=!focusMode;showReader(selected);
         },focused));
         if(bookIndex==21||bookIndex==22)add(reading,text("For this long madal, marking read applies to the entire source passage, not each number in its range.",11,muted(),false));
+        add(reading,button("Suggest a correction",()->showCorrectionSheet(v),false));
         add(reading,button(bookmarked(v.number)?"★ Saved · tap to remove":"☆ Save pasuram",()->{
             setBookmark(v.number,!bookmarked(v.number));showReader(selected);
         },bookmarked(v.number)));
@@ -186,6 +204,125 @@ public final class MainActivity extends Activity {
         Button previous=button("‹ Previous",()->showReader(selected-1),false);previous.setEnabled(selected>0);buttons.addView(previous,new LinearLayout.LayoutParams(0,dp(48),1));
         Button next=button("Next ›",()->showReader(selected+1),true);next.setEnabled(selected<verses.size()-1);buttons.addView(next,new LinearLayout.LayoutParams(0,dp(48),1));
         if(!focused)add(card(body),text("Audio is not packaged in this alpha. Playback will come in a tested later milestone.",11,muted(),false));
+    }
+    private EditText correctionInput(String label,String value,int max,LinearLayout container){
+        TextView heading=text(label,13,fg(),true);pad(heading,0,12,0,0);add(container,heading);
+        EditText field=new EditText(this);field.setTextColor(fg());field.setHintTextColor(muted());field.setTextSize(15);field.setHint(label);
+        field.setText(value);if(max>0)field.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(max)});
+        add(container,field);return field;
+    }
+    private static String value(EditText field){return field.getText().toString().trim();}
+    private void showCorrectionSheet(Verse verse){
+        correctionImage=null;
+        final long openedAt=android.os.SystemClock.elapsedRealtime();
+        LinearLayout fields=column();pad(fields,18,10,18,20);
+        add(fields,text("Suggest a correction for pasuram "+verse.number,20,fg(),true));
+        add(fields,text("Review before submitting. This sends your report, current and corrected lines, and optional name or image to the corrections service. If offline, it stays privately queued and retries when connected. The reading text will not change.",13,muted(),false));
+        String[] kinds={"text","image","audio","page","idea"};
+        Spinner kind=new Spinner(this);ArrayAdapter<String> adapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,kinds);kind.setAdapter(adapter);add(fields,kind);
+        TextView categoryLabel=text("Issue category (image/audio)",13,fg(),true);add(fields,categoryLabel);
+        String[] imageCategories={"Wrong temple or deity","Poor quality","Wrong credit","Other"};
+        String[] audioCategories={"Does not play","Wrong pasuram","Poor quality"};
+        Spinner category=new Spinner(this);add(fields,category);
+        kind.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            public void onNothingSelected(android.widget.AdapterView<?> parent){}
+            public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
+                String selected=kinds[position];boolean required=selected.equals("image")||selected.equals("audio");
+                category.setVisibility(required?View.VISIBLE:View.GONE);categoryLabel.setVisibility(required?View.VISIBLE:View.GONE);
+                if(required)category.setAdapter(new ArrayAdapter<>(MainActivity.this,android.R.layout.simple_spinner_dropdown_item,selected.equals("image")?imageCategories:audioCategories));
+            }
+        });
+        EditText screen=correctionInput("Screen name or route (page reports)", "app:/reader/"+verse.number,300,fields);
+        EditText correctedTamil=correctionInput("Correct Tamil lines (if relevant)","",0,fields);
+        EditText correctedLatin=correctionInput("Correct transliteration (if relevant)","",0,fields);
+        EditText note=correctionInput("Explain the issue (max 2000 characters)","",2000,fields);
+        EditText source=correctionInput("Image source or credit (required for an attachment)","",500,fields);
+        EditText name=correctionInput("Your name (optional)","",40,fields);
+        add(fields,button("Choose image (JPEG, PNG or WebP)",()->{
+            Intent picker=new Intent(Intent.ACTION_OPEN_DOCUMENT);picker.setType("image/*");picker.addCategory(Intent.CATEGORY_OPENABLE);
+            picker.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/jpeg","image/png","image/webp"});startActivityForResult(picker,PICK_CORRECTION_IMAGE);
+        },false));
+        correctionImageStatus=text("No image selected",12,muted(),false);add(fields,correctionImageStatus);
+        ScrollView scroll=new ScrollView(this);scroll.addView(fields);
+        AlertDialog dialog=new AlertDialog.Builder(this).setView(scroll).setNegativeButton("Cancel",(d,w)->{}).setPositiveButton("Submit correction",null).create();
+        dialog.setOnDismissListener(d->{correctionImage=null;correctionImageStatus=null;});
+        dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            try{
+                String detail=value(note), imageSource=value(source), selectedKind=kind.getSelectedItem().toString();
+                if(selectedKind.equals("text")&&value(correctedTamil).isEmpty()&&value(correctedLatin).isEmpty()){
+                    correctedTamil.setError("Enter a corrected Tamil line or transliteration");return;
+                }
+                if(detail.isEmpty()&&value(correctedTamil).isEmpty()&&value(correctedLatin).isEmpty()){
+                    note.setError("Explain the issue or enter corrected lines");return;
+                }
+                if(selectedKind.equals("page")&&value(screen).isEmpty()){screen.setError("Name the screen");return;}
+                if(selectedKind.equals("image")&&correctionImage==null&&detail.isEmpty()){note.setError("Explain which image needs fixing");return;}
+                if(correctionImage!=null&&imageSource.isEmpty()){source.setError("An image source is required");return;}
+                long ms=android.os.SystemClock.elapsedRealtime()-openedAt;
+                if(ms<3000){Toast.makeText(this,"Please check your report before saving",Toast.LENGTH_SHORT).show();return;}
+                JSONObject report=new JSONObject();report.put("kind",selectedKind);report.put("n",verse.number);
+                report.put("prab",bookName);report.put("img","");
+                report.put("what",selectedKind.equals("image")||selectedKind.equals("audio")?category.getSelectedItem().toString():"");
+                if(selectedKind.equals("page"))report.put("page",value(screen));
+                report.put("ta",value(correctedTamil));report.put("en",value(correctedLatin));
+                report.put("was_ta",selectedKind.equals("text")?verse.tamil:"");report.put("was_en",selectedKind.equals("text")?verse.latin:"");report.put("note",detail);
+                report.put("source",imageSource);report.put("name",value(name));
+                if(correctionImage!=null)report.put("image",correctionImage);
+                report.put("hp","");report.put("ms",ms);
+                correctionQueue.append(report);CorrectionSubmitter.schedule(this);dialog.dismiss();
+                Toast.makeText(this,"Report saved. Submitting in the background.",Toast.LENGTH_LONG).show();
+                correctionWorker.execute(()->{CorrectionSubmitter.Outcome result=CorrectionSubmitter.submitPending(this);
+                    if(result.queued>0)CorrectionSubmitter.schedule(this);
+                    runOnUiThread(()->{String message=result.delivered>0?"Correction submitted":result.rejected>0?"Correction needs review: "+result.error:"Offline or service unavailable. Report queued to retry.";
+                        Toast.makeText(this,message,Toast.LENGTH_LONG).show();});
+                });
+            }catch(Exception ex){new AlertDialog.Builder(this).setMessage("Could not save the report: "+ex.getMessage()).setPositiveButton("OK",null).show();}
+        }));
+        dialog.show();
+        dialog.getWindow().setBackgroundDrawable(shape(surface(),18));
+    }
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode!=PICK_CORRECTION_IMAGE||resultCode!=RESULT_OK||data==null||data.getData()==null)return;
+        if(correctionImageStatus==null)return;
+        try{correctionImage=encodeImage(data.getData());correctionImageStatus.setText("Image attached and resized for report");}
+        catch(Exception ex){correctionImage=null;correctionImageStatus.setText("Could not attach image: "+ex.getMessage());}
+    }
+    private String encodeImage(Uri uri)throws Exception{
+        android.graphics.BitmapFactory.Options bounds=new android.graphics.BitmapFactory.Options();bounds.inJustDecodeBounds=true;
+        try(InputStream input=getContentResolver().openInputStream(uri)){BitmapFactory.decodeStream(input,null,bounds);}
+        if(bounds.outWidth<=0||bounds.outHeight<=0)throw new IOException("Unsupported image");
+        int sample=1;while(Math.max(bounds.outWidth/sample,bounds.outHeight/sample)>1600)sample*=2;
+        android.graphics.BitmapFactory.Options options=new android.graphics.BitmapFactory.Options();options.inSampleSize=sample;
+        Bitmap decoded;try(InputStream input=getContentResolver().openInputStream(uri)){decoded=BitmapFactory.decodeStream(input,null,options);}
+        if(decoded==null)throw new IOException("Image could not be opened");
+        int width=decoded.getWidth(),height=decoded.getHeight();double scale=Math.min(1.0,1600.0/Math.max(width,height));
+        Bitmap resized=scale<1.0?Bitmap.createScaledBitmap(decoded,(int)(width*scale),(int)(height*scale),true):decoded;
+        if(resized!=decoded)decoded.recycle();
+        ByteArrayOutputStream out=new ByteArrayOutputStream();resized.compress(Bitmap.CompressFormat.JPEG,82,out);resized.recycle();
+        if(out.size()>1500000)throw new IOException("Image remains above 1.5 MB after resizing. Choose a smaller image.");
+        return "data:image/jpeg;base64,"+Base64.encodeToString(out.toByteArray(),Base64.NO_WRAP);
+    }
+    private void showCorrectionReports(){page="Corrections";start("Correction reports","Private queue on this device","Home");
+        try{JSONArray queue=correctionQueue.read();
+            if(queue.length()==0){add(card(body),text("No pending reports. Submitted reports leave this device's queue.",13,muted(),false));return;}
+            add(card(body),text(queue.length()+" report(s) waiting or needing review",16,fg(),true));
+            add(card(body),button("Retry pending reports",()->{
+                correctionWorker.execute(()->{CorrectionSubmitter.Outcome outcome=CorrectionSubmitter.submitPending(this);
+                    if(outcome.queued>0)CorrectionSubmitter.schedule(this);
+                    runOnUiThread(()->{Toast.makeText(this,outcome.error.isEmpty()?"Submission check finished":outcome.error,Toast.LENGTH_LONG).show();showCorrectionReports();});
+                });
+            },true));
+            for(int i=0;i<queue.length();i++){
+                JSONObject entry=queue.getJSONObject(i),report=entry.getJSONObject("payload");LinearLayout c=card(body);
+                add(c,text(report.optString("kind")+" · pasuram "+report.optInt("n"),16,fg(),true));
+                add(c,text("needs-review".equals(entry.optString("status"))?"Needs review: "+entry.optString("error"):"Pending network submission",12,muted(),false));
+                if("needs-review".equals(entry.optString("status"))){String id=entry.optString("id");
+                    add(c,button("Delete rejected report",()->new AlertDialog.Builder(this).setMessage("Delete this rejected report from the device?")
+                        .setNegativeButton("Cancel",null).setPositiveButton("Delete",(d,w)->{try{correctionQueue.remove(id);showCorrectionReports();}
+                            catch(Exception ex){Toast.makeText(this,"Could not delete report",Toast.LENGTH_LONG).show();}}).show(),false));}
+            }
+        }catch(Exception ex){add(card(body),text("Could not read reports on this device.",13,muted(),false));}
     }
     private void showSearch(){page="Search";start("Find a pasuram","Search all 4,000 · offline","Search");
         EditText input=new EditText(this);input.setTextColor(fg());input.setHintTextColor(muted());input.setSingleLine(true);input.setTextSize(16);input.setHint("Tamil, transliteration, number");pad(input,18,8,18,8);add(body,input);
@@ -301,6 +438,6 @@ public final class MainActivity extends Activity {
     private void showNotice(String tab){page=tab;start(tab,"Coming after the core reader",""+tab);
         add(card(body),text("This is an early build. The approved "+tab.toLowerCase(Locale.ROOT)+" screens are not yet implemented. The reading experience remains usable offline.",15,fg(),false));
     }
-    @Override protected void onDestroy(){searchGeneration++;mainHandler.removeCallbacksAndMessages(null);if(currentSearch!=null)currentSearch.cancel(true);searchWorker.shutdownNow();super.onDestroy();}
+    @Override protected void onDestroy(){searchGeneration++;mainHandler.removeCallbacksAndMessages(null);if(currentSearch!=null)currentSearch.cancel(true);searchWorker.shutdownNow();correctionWorker.shutdownNow();super.onDestroy();}
     @Override public void onBackPressed(){if(page.equals("Reader"))showIndex();else if(page.equals("Recite"))showBooks();else showHome();}
 }

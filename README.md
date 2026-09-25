@@ -1,6 +1,6 @@
 # Divya Prabandham Android - core reader alpha
 
-Native Java/View Android project, minSdk 31 (Android 12), targetSdk 37. No account, key, network permission or external runtime library. Not yet the approved 42-screen v1; do not distribute as a finished edition.
+Native Java/View Android project, minSdk 31 (Android 12), targetSdk 37. No account or external runtime library. The approval-pending branch now includes an app identifier and Internet permission for the user-initiated corrections feature; the pinned alpha remains offline and separate. Not yet the approved 42-screen v1; do not distribute as a finished edition.
 
 Build with JDK 17 and Android SDK platform 37 / build tools 37:
 
@@ -8,7 +8,7 @@ Build with JDK 17 and Android SDK platform 37 / build tools 37:
 
 Core milestone: Home, 25 prabandhams covering numbered pasurams 1-4000, offline book/index/reader and global search across the 4,000, Tamil and transliteration, four themes, persisted book/reading place and text size. The site's devotional text is bundled verbatim from live assets (see books/manifest.json with URLs and SHA-256 hashes); no text is generated. The two long madals are represented by one complete passage each, preserving their site's numbered ranges 2673-2712 and 2713-2790. Their internal split boundaries have not been invented.
 
-No audio, meanings, maps or images are implemented yet. Other approved screens remain staged in the roadmap. Add cited meanings and tested audio in later milestones. Image/photo choices are still pending user review. Keep the same navigation and behaviour across themes. No auto-correction of devotional text.
+No audio playback, meanings, maps or sourced devotional images are implemented yet. Other approved screens remain staged in the roadmap. Add cited meanings and tested audio in later milestones. Image/photo choices are still pending user review. Keep the same navigation and behaviour across themes. No auto-correction of devotional text.
 
 Verification so far: Gradle debug build passes, manifest identifies SDK floor; manifest validation finds all 4,000 numbers once with no gaps. Real Android UI screenshot and interactive QA are still required before an installable alpha can be offered for use. A software API 29 emulator did start but its full boot/Package Manager did not become responsive under this host's 2 GB RAM and no KVM; Android 12 and 17 interactive QA remains open.
 
@@ -22,3 +22,7 @@ After the first pinned alpha was handed off, a separate, approval-pending branch
 The first version in the repo and the current local workspace may differ. Confirm a repository commit before offering an APK link, and confirm the device screenshot is from that same commit.
 
 This branch is isolated from the pinned API 29 alpha. The 2026 Android 17 SDK setup guide specifies API 37: https://developer.android.com/about/versions/17/setup-sdk. Setting compile/target 37 does not prove runtime compatibility without a device test. MinSdk 31 excludes Android 10/11 that the earlier five-year buffer included; owner to confirm at the morning review.
+
+## Approval-pending corrections
+
+The reader's correction sheet sends only after a user taps Submit, then saves a private atomic on-device queue before trying the HTTPS endpoint. Image attachments are resized locally to at most 1600 px and must be under 1.5 MB. User-supplied source/credit is required for attached images. A network-gated persisted JobScheduler job retries queued 429, 5xx and network failures. 400/413 replies are held for review with the server's error. A response is removed only on HTTP 200 with `{"ok":true}`. The current verse's original Tamil and transliteration are sent for text diffs. Nothing automatically edits the devotional text. Submission semantics and presentation need live device and staging-server QA before release; no test submission was sent by this development task.
