@@ -1,0 +1,16 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'org.divyaprabandham.reader'
+    compileSdk 37
+    defaultConfig {
+        applicationId 'org.divyaprabandham.reader'
+        minSdk 31
+        targetSdk 37
+        versionCode 2
+        versionName '0.2.0-next-private'
+    }
+    buildTypes {
+        release { minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt') }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
