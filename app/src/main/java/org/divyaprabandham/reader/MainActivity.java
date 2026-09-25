@@ -4,12 +4,10 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.os.Build;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
@@ -45,6 +43,7 @@ public final class MainActivity extends Activity {
     private int theme=0, selected=0, textSize=21;
     private android.os.Handler mainHandler=new android.os.Handler(android.os.Looper.getMainLooper());
     private String page="Home";
+    private boolean focusMode=false;
     private boolean transliteration=false;
     private boolean isRead(int n){return preferences.getBoolean("read-"+n,false);}
     private void markRead(int n,boolean value){preferences.edit().putBoolean("read-"+n,value).apply();}
@@ -153,8 +152,14 @@ public final class MainActivity extends Activity {
         LinearLayout c=card(body);add(c,text(bookTamil+" · "+bookAlvar,15,ac(),true));
         TextView verse=text(transliteration?v.latin:v.tamil,textSize,fg(),false);verse.setLineSpacing(dp(7),1.28f);pad(verse,0,22,0,20);add(c,verse);
         if(bookIndex==21||bookIndex==22)add(c,text("This complete madal is one source passage covering a numbered range; individual verse boundaries are not marked in the site data.",11,muted(),false));
-        add(c,text("Text: bundled verbatim from the site edition · recitation marks kept",11,muted(),false));
-        LinearLayout reading=card(body);if(bookIndex==21||bookIndex==22)add(reading,text("For this long madal, marking read applies to the entire source passage, not each number in its range.",11,muted(),false));
+        if(!focusMode)
+            add(c,text("Text: bundled verbatim from the site edition · recitation marks kept",11,muted(),false));
+        LinearLayout reading=card(body);
+        boolean focused=focusMode;
+        add(reading,button(focused?"Exit focus":"Focus on this pasuram",()->{
+            focusMode=!focusMode;showReader(selected);
+        },focused));
+        if(bookIndex==21||bookIndex==22)add(reading,text("For this long madal, marking read applies to the entire source passage, not each number in its range.",11,muted(),false));
         add(reading,button(isRead(v.number)?"✓ Marked read · tap to undo":"Mark as read",()->{
             boolean now=!isRead(v.number);markRead(v.number,now);showReader(selected);
         },isRead(v.number)));
@@ -166,7 +171,7 @@ public final class MainActivity extends Activity {
         LinearLayout move=card(body);LinearLayout buttons=new LinearLayout(this);add(move,buttons);
         Button previous=button("‹ Previous",()->showReader(selected-1),false);previous.setEnabled(selected>0);buttons.addView(previous,new LinearLayout.LayoutParams(0,dp(48),1));
         Button next=button("Next ›",()->showReader(selected+1),true);next.setEnabled(selected<verses.size()-1);buttons.addView(next,new LinearLayout.LayoutParams(0,dp(48),1));
-        add(card(body),text("Audio is not packaged in this alpha. Playback will come in a tested later milestone.",11,muted(),false));
+        if(!focused)add(card(body),text("Audio is not packaged in this alpha. Playback will come in a tested later milestone.",11,muted(),false));
     }
     private void showSearch(){page="Search";start("Find a pasuram","Search all 4,000 · offline","Search");
         EditText input=new EditText(this);input.setTextColor(fg());input.setHintTextColor(muted());input.setSingleLine(true);input.setTextSize(16);input.setHint("Tamil, transliteration, number");pad(input,18,8,18,8);add(body,input);
