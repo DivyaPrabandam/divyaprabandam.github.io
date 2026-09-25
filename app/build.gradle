@@ -6,8 +6,8 @@ android {
         applicationId 'org.divyaprabandham.reader'
         minSdk 31
         targetSdk 37
-        versionCode 15
-        versionName '0.4.8-lyric-cue-QA'
+        versionCode 16
+        versionName '0.4.9-production-publisher-QA'
     }
     buildTypes {
         release { minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt') }

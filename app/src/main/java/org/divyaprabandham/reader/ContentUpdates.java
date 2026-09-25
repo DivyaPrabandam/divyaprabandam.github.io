@@ -38,9 +38,9 @@ final class ContentUpdates {
     private static final int MAX_IMAGES_CACHED=50,MAX_IMAGE_CACHE_BYTES=24_000_000;
     private static final int MAX_IMAGES_PER_WIFI_PASS=8,MAX_IMAGES_PER_CELL_PASS=2;
     private static final int MAX_IMAGE_BYTES_PER_WIFI_PASS=6_000_000,MAX_IMAGE_BYTES_PER_CELL_PASS=600_000;
-    // The production manifest URL is intentionally unset until the publisher is deployed.
-    // This pinned SPKI is public verification material, not a credential.
-    private static final String MANIFEST_URL="";
+    // Production publisher. The raw manifest must verify against the pinned public key.
+    // This SPKI is public verification material, not a credential.
+    private static final String MANIFEST_URL="https://publisher.divyaprabandam.workers.dev/manifest";
     private static final String PUBLIC_KEY_X509_BASE64="MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEtu9UWY5Csac9VQXqRxY3g3P+sshwrvTQ45gKQRpyXtVoyw/QA/hxSk+H2QWplRORdZsZE6AEazZLFap8IDsrVw==";
     static boolean configured(){return !MANIFEST_URL.isEmpty()&&!PUBLIC_KEY_X509_BASE64.isEmpty();}
     private final Context context;

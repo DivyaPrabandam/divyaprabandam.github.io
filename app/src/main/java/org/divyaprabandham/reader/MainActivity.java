@@ -94,14 +94,19 @@ public final class MainActivity extends Activity {
         transliteration=preferences.getBoolean("transliteration",false);
         try { JSONArray updated=contentUpdates.activeBooks();books=updated!=null?updated:new JSONArray(readAsset("books/manifest.json")); }catch(Exception e){throw new IllegalStateException("Book index missing",e);}
         bookIndex=preferences.getInt("book",2); loadBook(bookIndex); if(selected<0||selected>=verses.size())selected=0; showHome();
-        // The production publisher route remains unset pending deploy and verification.
+        // Check the signed publisher in the background; never pull the reader away from
+        // a screen the user opened while the network call was in flight.
         if(ContentUpdates.configured()&&contentUpdates.checkDue()){
-            getSharedPreferences("content-settings",MODE_PRIVATE).edit().putString("last-result","checking").remove("last-error").apply();showHome();
+            getSharedPreferences("content-settings",MODE_PRIVATE).edit().putString("last-result","checking").remove("last-error").apply();
             updateWorker.execute(()->{try{String state=contentUpdates.check();
-            runOnUiThread(()->{if("app-update-required".equals(state))showHome();else if("updated".equals(state))applyContentUpdate();else showHome();});
-        }catch(Exception ex){getSharedPreferences("content-settings",MODE_PRIVATE).edit().putString("last-error",ex.getClass().getSimpleName()).apply();
-            android.util.Log.w("ContentUpdates","Check deferred",ex);runOnUiThread(this::showHome);}});}
-        else if(ContentUpdates.configured()){showHome();}
+                runOnUiThread(()->{
+                    if(isFinishing()||isDestroyed())return;
+                    if("updated".equals(state)){if("Home".equals(page))applyContentUpdate();else searchIndex=null;}
+                    else if("app-update-required".equals(state)&&"Home".equals(page))showHome();
+                });
+            }catch(Exception ex){getSharedPreferences("content-settings",MODE_PRIVATE).edit().putString("last-error",ex.getClass().getSimpleName()).apply();
+                android.util.Log.w("ContentUpdates","Check deferred",ex);}});
+        }
     }
     private void applyContentUpdate(){try{JSONArray refreshed=contentUpdates.activeBooks();if(refreshed==null)return;
         books=refreshed;searchIndex=null;bookIndex=Math.min(bookIndex,books.length()-1);int number=verses.get(selected).number;
