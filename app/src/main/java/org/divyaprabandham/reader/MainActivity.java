@@ -92,7 +92,7 @@ public final class MainActivity extends Activity {
     private void add(LinearLayout into,View child){into.addView(child,new LinearLayout.LayoutParams(-1,-2));}
     private LinearLayout card(LinearLayout into){LinearLayout c=column();c.setBackground(shape(surface(),theme==1?8:18));pad(c,16,15,16,15);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(dp(16),dp(8),dp(16),dp(4));into.addView(c,p);return c;}
-    private Button button(String label,Runnable run,boolean strong){Button b=new Button(this);b.setText(label);b.setTextSize(elderMode?15:12);b.setAllCaps(false);b.setMinimumHeight(dp(48));b.setTextColor(strong?bg():ac());b.setBackground(shape(strong?ac():surface(),theme==1?7:23));b.setOnClickListener(v->run.run());return b;}
+    private Button button(String label,Runnable run,boolean strong){Button b=new Button(this);b.setText(label);b.setTextSize(elderMode?15:12);b.setAllCaps(false);b.setMinimumHeight(dp(elderMode?56:48));b.setTextColor(strong?bg():ac());b.setBackground(shape(strong?ac():surface(),theme==1?7:23));b.setOnClickListener(v->run.run());return b;}
     private void start(String title,String subtitle,String active){
         getWindow().setStatusBarColor(bg());getWindow().setNavigationBarColor(bg());
         getWindow().getDecorView().setSystemUiVisibility(theme==1||theme==2?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0);
