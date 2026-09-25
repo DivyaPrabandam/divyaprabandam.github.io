@@ -135,7 +135,7 @@ public final class MainActivity extends Activity {
         add(card(body),button(elderMode?"Elder mode on · turn off":"Elder mode · larger text and controls",()->{
             elderMode=!elderMode;preferences.edit().putBoolean("elder",elderMode).apply();showHome();
         },elderMode));
-        add(card(body),text("All 4,000 numbered pasurams are bundled across 25 books. Meanings, audio, and the other approved screens are not yet implemented.",13,muted(),false));
+        add(card(body),text("All 4,000 numbered pasurams are bundled across 25 books. Meanings, audio, and other approved screens are not yet implemented.",13,muted(),false));
     }
     private void showBooks(){page="Books";start("The 4,000 pasurams","25 prabandhams · offline","Recite");
         try{for(int i=0;i<books.length();i++){final int idx=i;JSONObject meta=books.getJSONObject(i);LinearLayout c=card(body);
