@@ -186,10 +186,20 @@ public final class MainActivity extends Activity {
         add(card(body),text("All 4,000 numbered pasurams are available offline. Audio playback is coming in the next milestone.",13,muted(),false));
     }
     private void showBooks(){page="Books";start("The 4,000 pasurams","25 prabandhams · offline","Recite");
-        try{for(int i=0;i<books.length();i++){final int idx=i;JSONObject meta=books.getJSONObject(i);LinearLayout c=card(body);
-            add(c,text(meta.getString("name"),19,fg(),true));add(c,text(meta.getString("alvar")+" · "+meta.getInt("start")+"–"+meta.getInt("end"),12,muted(),false));
-            c.setMinimumHeight(dp(72));c.setOnClickListener(v->{loadBook(idx);selected=0;preferences.edit().putInt("book",idx).putInt("selected",0).apply();showIndex();});
-        }}catch(Exception e){throw new IllegalStateException("Book list unreadable",e);}}
+        int shown=0;
+        for(int i=0;i<books.length();i++){final int idx=i;
+            try{JSONObject meta=books.getJSONObject(i);String name=meta.optString("name","").trim();
+                if(name.isEmpty())name=meta.optString("id","Book "+(i+1));
+                LinearLayout c=card(body);add(c,text(name,19,fg(),true));
+                String alvar=meta.optString("alvar","");
+                add(c,text(alvar+" · "+meta.getInt("start")+"–"+meta.getInt("end"),12,muted(),false));
+                c.setMinimumHeight(dp(72));c.setOnClickListener(v->{try{loadBook(idx);selected=0;
+                    preferences.edit().putInt("book",idx).putInt("selected",0).apply();showIndex();}
+                    catch(Exception ex){new AlertDialog.Builder(this).setMessage("This book could not open. The rest of the library is still available.")
+                        .setPositiveButton("OK",null).show();}});shown++;
+            }catch(Exception ex){android.util.Log.w("Books","Skipping malformed list entry "+i,ex);}
+        }
+        if(shown==0)add(card(body),text("The book list could not be shown. Reading your last open book remains available.",13,muted(),false));}
     private int loadedIndexCards=0; private int searchGeneration=0;
     private ScrollView currentScroll;
     private void showIndex(){page="Recite";start(bookName,bookAlvar+" · "+bookTamil+" · "+verses.size()+" passages","Recite");

@@ -74,7 +74,21 @@ final class ContentUpdates {
         File active=new File(snapshots,id);
         return new File(active,"complete").isFile()?active:null;
     }
-    JSONArray activeBooks()throws Exception{JSONObject m=metadata();return m==null?null:m.getJSONArray("books");}
+    JSONArray activeBooks()throws Exception{
+        JSONArray bundled=new JSONArray(new String(readBounded(context.getAssets().open("books/manifest.json"),MAX_MANIFEST),StandardCharsets.UTF_8));
+        JSONObject active=metadata();if(active==null)return bundled;
+        JSONArray descriptors=active.getJSONArray("books"),merged=new JSONArray();
+        if(descriptors.length()!=bundled.length())throw new IllegalArgumentException("Book index count changed");
+        for(int i=0;i<bundled.length();i++){
+            JSONObject base=bundled.getJSONObject(i),descriptor=descriptors.getJSONObject(i);
+            if(!base.getString("id").equals(descriptor.getString("id")))throw new IllegalArgumentException("Book order or ID changed");
+            JSONObject meta=new JSONObject(base.toString());
+            meta.put("file",descriptor.getString("file"));
+            // Download descriptors contain hashes and filenames, not reader-facing labels.
+            merged.put(meta);
+        }
+        return merged;
+    }
     int activeVersion()throws Exception{JSONObject m=metadata();return m==null?0:m.getInt("contentVersion");}
     File imageFile(String imageId){if(!imageId.matches("[a-zA-Z0-9_-]{1,80}"))return null;
         File f=new File(new File(snapshots,"images"),imageId+".jpg");return f.isFile()?f:null;}
@@ -201,6 +215,12 @@ final class ContentUpdates {
         File stage=new File(snapshots,id+".staging"),complete=new File(snapshots,id);
         if(!stage.exists()&&!stage.mkdirs())throw new IllegalStateException("Cannot stage update");
         JSONArray descriptors=manifest.getJSONArray("books");
+        // Reject an incompatible book order before touching active storage. The current UI
+        // keeps reader-facing labels/ranges from the bundled index keyed by these IDs.
+        JSONArray originalIndex=new JSONArray(new String(readBounded(context.getAssets().open("books/manifest.json"),MAX_MANIFEST),StandardCharsets.UTF_8));
+        if(originalIndex.length()!=descriptors.length())throw new IllegalArgumentException("Book count changed");
+        for(int i=0;i<descriptors.length();i++)if(!originalIndex.getJSONObject(i).getString("id").equals(descriptors.getJSONObject(i).getString("id")))
+            throw new IllegalArgumentException("Book order changed");
         try{
             for(int i=0;i<descriptors.length();i++){
                 JSONObject b=descriptors.getJSONObject(i);String name=b.getString("file");File destination=new File(stage,name);
