@@ -187,10 +187,10 @@ public final class MainActivity extends Activity {
         for(int i=0;i<NAMES.length;i++){final int t=i;Button pick=button(NAMES[i],()->{theme=t;preferences.edit().putInt("theme",theme).apply();showHome();},i==theme);
             pick.setTextSize(10);choices.addView(pick,new LinearLayout.LayoutParams(0,dp(48),1));}
         LinearLayout icons=card(body);add(icons,text("App icon",14,fg(),true));
-        add(icons,text("Choose the full rounded painting or your Ramanujar-and-deity image on black. Some launchers take a moment to update.",12,muted(),false));
+        add(icons,text("Choose the full rounded painting or your Ramanujar-and-deity image with its background removed. Some launchers take a moment to update.",12,muted(),false));
         boolean cutoutIcon=preferences.getBoolean("cutout-launcher",false);
         add(icons,button(cutoutIcon?"Use rounded full painting":"Rounded full painting selected",()->setLauncherIcon(false),!cutoutIcon));
-        add(icons,button(cutoutIcon?"Black-background icon selected":"Use black-background image",()->setLauncherIcon(true),cutoutIcon));
+        add(icons,button(cutoutIcon?"Figure icon selected":"Use figure icon",()->setLauncherIcon(true),cutoutIcon));
         add(card(body),button(elderMode?"Elder mode on · turn off":"Elder mode · larger text and controls",()->{
             elderMode=!elderMode;preferences.edit().putBoolean("elder",elderMode).apply();showHome();
         },elderMode));

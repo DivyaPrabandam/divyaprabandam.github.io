@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Build two launchers from the user's two unaltered square images.
+"""Build two launchers from the owner's supplied square images.
 
-The second image has a black JPEG background. Preserve it as black. Only
-resize and mask at launcher boundaries; no segmentation, redrawing or filters.
+The alternate icon uses the owner's black-background JPEG with its connected
+black backdrop keyed to alpha. The original RGB of the figures is retained.
 """
 from pathlib import Path
 from PIL import Image,ImageDraw
@@ -18,7 +18,9 @@ def source(filename):
     return image.resize((MASTER,MASTER),Image.Resampling.LANCZOS)
 
 full=source('user-provided-icon.jpg')
-black=source('user-provided-removed-background-icon.jpg')
+cutout=Image.open(OUT/'owner-cutout-transparent.png').convert('RGBA')
+assert cutout.size==(640,640)
+black=cutout.resize((MASTER,MASTER),Image.Resampling.LANCZOS)
 
 def rounded(canvas,radius):
     mask=Image.new('L',canvas.size);ImageDraw.Draw(mask).rounded_rectangle((0,0,canvas.width-1,canvas.height-1),radius=radius,fill=255)
@@ -36,9 +38,9 @@ for density,px in [('mdpi',48),('hdpi',72),('xhdpi',96),('xxhdpi',144),('xxxhdpi
     path=RES/('mipmap-'+density)
     rounded(full.resize((px,px),Image.Resampling.LANCZOS),round(px*.17)).save(path/'ic_launcher.png')
     circle(full.resize((px,px),Image.Resampling.LANCZOS)).save(path/'ic_launcher_round.png')
-    blackscaled=black.resize((px,px),Image.Resampling.LANCZOS)
-    rounded(blackscaled,round(px*.17)).save(path/'ic_launcher_cutout.png')
-    circle(blackscaled).save(path/'ic_launcher_cutout_round.png')
+    cutscaled=black.resize((px,px),Image.Resampling.LANCZOS)
+    cutscaled.save(path/'ic_launcher_cutout.png')
+    circle(cutscaled).save(path/'ic_launcher_cutout_round.png')
 rounded(full,round(MASTER*.17)).resize((512,512),Image.Resampling.LANCZOS).save(OUT/'launcher-icon-preview.png')
-rounded(black,round(MASTER*.17)).resize((512,512),Image.Resampling.LANCZOS).save(OUT/'launcher-cutout-preview.png')
+black.resize((512,512),Image.Resampling.LANCZOS).save(OUT/'launcher-cutout-preview.png')
 circle(black.resize((48,48),Image.Resampling.LANCZOS)).save(OUT/'launcher-cutout-round-48px-preview.png')
