@@ -91,10 +91,13 @@ public final class MainActivity extends Activity {
         getWindow().setStatusBarColor(bg());getWindow().setNavigationBarColor(bg());
         getWindow().getDecorView().setSystemUiVisibility(theme==1||theme==2?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0);
         root=column();root.setBackgroundColor(bg());
-        if(Build.VERSION.SDK_INT>=35){root.setOnApplyWindowInsetsListener((v,insets)->{
-            root.setPadding(0,insets.getSystemWindowInsetTop(),0,insets.getSystemWindowInsetBottom());
+        root.setOnApplyWindowInsetsListener((v,insets)->{
+            // Handle forced edge-to-edge at target 37, without double-padding older system layouts.
+            boolean laidOutEdgeToEdge=(getWindow().getDecorView().getSystemUiVisibility()&View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)!=0 || Build.VERSION.SDK_INT>=35;
+            root.setPadding(0,laidOutEdgeToEdge?insets.getSystemWindowInsetTop():0,0,
+                laidOutEdgeToEdge?insets.getSystemWindowInsetBottom():0);
             return insets.consumeSystemWindowInsets();
-        });}
+        });
         setContentView(root);
         TextView heading=text(title,27,fg(),true);pad(heading,20,15,20,0);add(root,heading);
         TextView sub=text(subtitle,12,muted(),false);pad(sub,20,3,20,13);add(root,sub);
