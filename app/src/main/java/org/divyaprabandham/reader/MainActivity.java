@@ -52,6 +52,7 @@ public final class MainActivity extends Activity {
     private java.util.concurrent.Future<?> currentSearch;
     private SharedPreferences preferences;
     private CorrectionQueue correctionQueue;
+    private CorrectionDrafts correctionDrafts;
     private ContentUpdates contentUpdates;
     private final ExecutorService updateWorker=Executors.newSingleThreadExecutor();
     private String correctionImage=null;
@@ -79,7 +80,7 @@ public final class MainActivity extends Activity {
     }
     @Override public void onCreate(Bundle saved){super.onCreate(saved);getWindow().requestFeature(Window.FEATURE_NO_TITLE);
         preferences=getSharedPreferences("reading",MODE_PRIVATE);
-        correctionQueue=new CorrectionQueue(this);contentUpdates=new ContentUpdates(this);ContentUpdates.schedule(this);
+        correctionQueue=new CorrectionQueue(this);correctionDrafts=new CorrectionDrafts(this);contentUpdates=new ContentUpdates(this);ContentUpdates.schedule(this);
         theme=preferences.getInt("theme",0); selected=preferences.getInt("selected",0);textSize=preferences.getInt("size",21);
         elderMode=preferences.getBoolean("elder",false);
         transliteration=preferences.getBoolean("transliteration",false);
@@ -234,7 +235,7 @@ public final class MainActivity extends Activity {
             focusMode=!focusMode;showReader(selected);
         },focused));
         if(bookIndex==21||bookIndex==22)add(reading,text("For this long madal, marking read applies to the entire source passage, not each number in its range.",11,muted(),false));
-        if(correctionMode)add(reading,button("Suggest a correction",()->showCorrectionSheet(v),true));
+        if(correctionMode)add(reading,button(correctionDrafts.has(v.number)?"Continue correction draft":"Suggest a correction",()->showCorrectionSheet(v),true));
         add(reading,button(bookmarked(v.number)?"★ Saved · tap to remove":"☆ Save pasuram",()->{
             setBookmark(v.number,!bookmarked(v.number));showReader(selected);
         },bookmarked(v.number)));
@@ -270,14 +271,16 @@ public final class MainActivity extends Activity {
     }
     private static String value(EditText field){return field.getText().toString().trim();}
     private void showCorrectionSheet(Verse verse){
-        if(!CorrectionSubmitter.enabled()){new AlertDialog.Builder(this).setMessage("Corrections cannot be submitted from this build yet. Please keep your suggested change and try a later version.").setPositiveButton("OK",null).show();return;}
-        correctionImage=null;
+        JSONObject savedDraft;
+        try{savedDraft=correctionDrafts.read(verse.number);}catch(Exception ex){new AlertDialog.Builder(this).setMessage("Could not open the saved draft. Nothing was deleted.").setPositiveButton("OK",null).show();return;}
+        correctionImage=savedDraft.optString("image",null);
         final long openedAt=android.os.SystemClock.elapsedRealtime();
         LinearLayout fields=column();pad(fields,18,10,18,20);
         add(fields,text("Suggest a correction for pasuram "+verse.number,20,fg(),true));
-        add(fields,text("Review before submitting. This sends your report, current and corrected lines, and optional name or image to the corrections service. If offline, it stays privately queued and retries when connected. The reading text will not change.",13,muted(),false));
+        add(fields,text(CorrectionSubmitter.enabled()?"Review before submitting. If offline, it stays queued and retries later.":"Draft only · correction sending is not ready in this build. Your draft stays privately on this phone; devotional text does not change.",13,muted(),false));
         String[] kinds={"text","image","audio","page","idea"};
         Spinner kind=new Spinner(this);ArrayAdapter<String> adapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,kinds);kind.setAdapter(adapter);add(fields,kind);
+        for(int i=0;i<kinds.length;i++)if(kinds[i].equals(savedDraft.optString("kind","text"))){kind.setSelection(i);break;}
         TextView categoryLabel=text("Issue category (image/audio)",13,fg(),true);add(fields,categoryLabel);
         String[] imageCategories={"Wrong temple or deity","Poor quality","Wrong credit","Other"};
         String[] audioCategories={"Does not play","Wrong pasuram","Poor quality"};
@@ -290,21 +293,29 @@ public final class MainActivity extends Activity {
                 if(required)category.setAdapter(new ArrayAdapter<>(MainActivity.this,android.R.layout.simple_spinner_dropdown_item,selected.equals("image")?imageCategories:audioCategories));
             }
         });
-        EditText screen=correctionInput("Screen name or route (page reports)", "app:/reader/"+verse.number,300,fields);
-        EditText correctedTamil=correctionInput("Correct Tamil lines (if relevant)","",0,fields);
-        EditText correctedLatin=correctionInput("Correct transliteration (if relevant)","",0,fields);
-        EditText note=correctionInput("Explain the issue (max 2000 characters)","",2000,fields);
-        EditText source=correctionInput("Image source or credit (required for an attachment)","",500,fields);
-        EditText name=correctionInput("Your name (optional)","",40,fields);
+        EditText screen=correctionInput("Screen name or route (page reports)", savedDraft.optString("page","app:/reader/"+verse.number),300,fields);
+        EditText correctedTamil=correctionInput("Correct Tamil lines (if relevant)",savedDraft.optString("ta",""),0,fields);
+        EditText correctedLatin=correctionInput("Correct transliteration (if relevant)",savedDraft.optString("en",""),0,fields);
+        EditText note=correctionInput("Explain the issue (max 2000 characters)",savedDraft.optString("note",""),2000,fields);
+        EditText source=correctionInput("Image source or credit (required for an attachment)",savedDraft.optString("source",""),500,fields);
+        EditText name=correctionInput("Your name (optional)",savedDraft.optString("name",""),40,fields);
         add(fields,button("Choose image (JPEG, PNG or WebP)",()->{
             Intent picker=new Intent(Intent.ACTION_OPEN_DOCUMENT);picker.setType("image/*");picker.addCategory(Intent.CATEGORY_OPENABLE);
             picker.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/jpeg","image/png","image/webp"});startActivityForResult(picker,PICK_CORRECTION_IMAGE);
         },false));
-        correctionImageStatus=text("No image selected",12,muted(),false);add(fields,correctionImageStatus);
+        correctionImageStatus=text(correctionImage==null?"No image selected":"Image saved in draft",12,muted(),false);add(fields,correctionImageStatus);
         ScrollView scroll=new ScrollView(this);scroll.addView(fields);
-        AlertDialog dialog=new AlertDialog.Builder(this).setView(scroll).setNegativeButton("Cancel",(d,w)->{}).setPositiveButton("Submit correction",null).create();
-        dialog.setOnDismissListener(d->{correctionImage=null;correctionImageStatus=null;});
+        AlertDialog dialog=new AlertDialog.Builder(this).setView(scroll).setNegativeButton("Close",(d,w)->{})
+            .setPositiveButton(CorrectionSubmitter.enabled()?"Submit correction":"Save draft",null).create();
+        dialog.setOnDismissListener(d->{try{JSONObject draft=new JSONObject();draft.put("kind",kind.getSelectedItem().toString());
+                draft.put("page",value(screen));draft.put("ta",value(correctedTamil));draft.put("en",value(correctedLatin));
+                draft.put("note",value(note));draft.put("source",value(source));draft.put("name",value(name));
+                if(correctionImage!=null)draft.put("image",correctionImage);
+                correctionDrafts.save(verse.number,draft);
+            }catch(Exception ex){Toast.makeText(this,"Draft could not be saved",Toast.LENGTH_LONG).show();}
+            correctionImage=null;correctionImageStatus=null;});
         dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            if(!CorrectionSubmitter.enabled()){dialog.dismiss();Toast.makeText(this,"Draft saved privately",Toast.LENGTH_SHORT).show();return;}
             try{
                 String detail=value(note), imageSource=value(source), selectedKind=kind.getSelectedItem().toString();
                 if(selectedKind.equals("text")&&value(correctedTamil).isEmpty()&&value(correctedLatin).isEmpty()){

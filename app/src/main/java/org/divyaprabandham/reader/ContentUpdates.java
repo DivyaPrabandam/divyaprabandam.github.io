@@ -76,12 +76,13 @@ final class ContentUpdates {
     }
     JSONArray activeBooks()throws Exception{
         JSONArray bundled=new JSONArray(new String(readBounded(context.getAssets().open("books/manifest.json"),MAX_MANIFEST),StandardCharsets.UTF_8));
-        JSONObject active=metadata();if(active==null)return bundled;
+        JSONObject active;try{active=metadata();}catch(Exception ex){android.util.Log.w("ContentUpdates","Active snapshot unavailable; using bundled books",ex);return bundled;}
+        if(active==null)return bundled;
         JSONArray descriptors=active.getJSONArray("books"),merged=new JSONArray();
-        if(descriptors.length()!=bundled.length())throw new IllegalArgumentException("Book index count changed");
+        if(descriptors.length()!=bundled.length()){android.util.Log.w("ContentUpdates","Book index count changed; using bundled books");return bundled;}
         for(int i=0;i<bundled.length();i++){
             JSONObject base=bundled.getJSONObject(i),descriptor=descriptors.getJSONObject(i);
-            if(!base.getString("id").equals(descriptor.getString("id")))throw new IllegalArgumentException("Book order or ID changed");
+            if(!base.getString("id").equals(descriptor.getString("id"))){android.util.Log.w("ContentUpdates","Book order changed; using bundled books");return bundled;}
             JSONObject meta=new JSONObject(base.toString());
             meta.put("file",descriptor.getString("file"));
             // Download descriptors contain hashes and filenames, not reader-facing labels.
