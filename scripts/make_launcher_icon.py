@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build two launchers from the owner's supplied square images.
 
-The alternate icon uses the owner's black-background JPEG with its connected
-black backdrop keyed to alpha. The original RGB of the figures is retained.
+The alternate icon uses the owner's supplied transparent PNG directly.
+Only launcher-size scaling is applied; no further background removal.
 """
 from pathlib import Path
 from PIL import Image,ImageDraw
@@ -18,7 +18,7 @@ def source(filename):
     return image.resize((MASTER,MASTER),Image.Resampling.LANCZOS)
 
 full=source('user-provided-icon.jpg')
-cutout=Image.open(OUT/'owner-cutout-transparent.png').convert('RGBA')
+cutout=Image.open(OUT/'source/user-provided-transparent-icon.png').convert('RGBA')
 assert cutout.size==(640,640)
 black=cutout.resize((MASTER,MASTER),Image.Resampling.LANCZOS)
 

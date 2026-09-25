@@ -10,7 +10,7 @@ Content updater code validates P-256 signed manifests and per-shard hashes, down
 
 Corrections submission is hard-disabled pending the rotated app-key injection, current Worker contract, and an actual phone-path test. Correction-mode drafts are private per-pasuram atomic files; the sheet/review queue code does not send and is not a functioning correction service in this build. Draft retention has not had device QA. Do not reactivate it by changing only the boolean.
 
-The launcher includes two in-app selectable styles: the original rounded-corner painting and the owner's separately supplied Ramanujar/deity image with its solid black JPEG backdrop keyed to transparency at his request. The earlier manual cutout was rejected and is not bundled as an icon. Current previews await owner review; alias switching has not been device-tested.
+The launcher includes two in-app selectable styles: the original rounded-corner painting and the owner's own transparent PNG of Ramanujar and the deity. The earlier manual cutout and keyed JPEG were superseded and are not bundled as icons. Current previews await owner review; alias switching has not been device-tested.
 
 No audio playback or meanings are packaged. The two long madals have no source recitation URLs and audio licensing/rights are not resolved. The agreed later roadmap includes search upgrades, per-book resume, daily notification, Margazhi mode, notes/highlights, opt-in temple visit companion, recitation-session mode and offline audio. These are not part of this v7 reading candidate. Learn/Explore remain placeholders.
 
