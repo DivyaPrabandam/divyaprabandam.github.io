@@ -19,8 +19,11 @@ final class CorrectionSubmitter {
     // App identifier, not a credential. Server-side caps, honeypot and dedupe still apply.
     private static final String APP_ID="dpapp_9fc60bd17dee7b9b4723ca9d5e8d2954";
     private static final int JOB_ID=47921;
+    // Re-enable only after the Worker app-key exemption passes live QA.
+    static boolean enabled(){return false;}
     static final class Outcome {int delivered,queued,rejected;String error="";}
     static void schedule(Context context){
+        if(!enabled())return;
         JobScheduler scheduler=context.getSystemService(JobScheduler.class);if(scheduler==null)return;
         JobInfo info=new JobInfo.Builder(JOB_ID,new ComponentName(context,CorrectionRetryJob.class))
             .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).setPersisted(true)
@@ -29,6 +32,7 @@ final class CorrectionSubmitter {
     }
     private static int pendingCount(JSONArray entries)throws Exception{int pending=0;for(int i=0;i<entries.length();i++)if("pending".equals(entries.getJSONObject(i).optString("status")))pending++;return pending;}
     static synchronized Outcome submitPending(Context context){
+        if(!enabled())return new Outcome();
         Outcome outcome=new Outcome();CorrectionQueue queue=new CorrectionQueue(context);
         try{
             JSONArray entries=queue.read();

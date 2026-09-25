@@ -52,6 +52,8 @@ public final class MainActivity extends Activity {
     private java.util.concurrent.Future<?> currentSearch;
     private SharedPreferences preferences;
     private CorrectionQueue correctionQueue;
+    private ContentUpdates contentUpdates;
+    private final ExecutorService updateWorker=Executors.newSingleThreadExecutor();
     private String correctionImage=null;
     private TextView correctionImageStatus;
     private static final int PICK_CORRECTION_IMAGE=481;
@@ -76,17 +78,27 @@ public final class MainActivity extends Activity {
     }
     @Override public void onCreate(Bundle saved){super.onCreate(saved);getWindow().requestFeature(Window.FEATURE_NO_TITLE);
         preferences=getSharedPreferences("reading",MODE_PRIVATE);
-        correctionQueue=new CorrectionQueue(this);
+        correctionQueue=new CorrectionQueue(this);contentUpdates=new ContentUpdates(this);ContentUpdates.schedule(this);
         theme=preferences.getInt("theme",0); selected=preferences.getInt("selected",0);textSize=preferences.getInt("size",21);
         elderMode=preferences.getBoolean("elder",false);
         transliteration=preferences.getBoolean("transliteration",false);
-        try { books=new JSONArray(readAsset("books/manifest.json")); }catch(Exception e){throw new IllegalStateException("Book index missing",e);}
+        try { JSONArray updated=contentUpdates.activeBooks();books=updated!=null?updated:new JSONArray(readAsset("books/manifest.json")); }catch(Exception e){throw new IllegalStateException("Book index missing",e);}
         bookIndex=preferences.getInt("book",2); loadBook(bookIndex); if(selected<0||selected>=verses.size())selected=0; showHome();
+        // The publisher route and signing key are not configured in this fixture build.
+        if(ContentUpdates.configured()&&contentUpdates.checkDue())updateWorker.execute(()->{try{String state=contentUpdates.check();
+            runOnUiThread(()->{if("app-update-required".equals(state))showHome();else if("updated".equals(state))applyContentUpdate();});
+        }catch(Exception ex){android.util.Log.w("ContentUpdates","Check deferred",ex);}});
     }
+    private void applyContentUpdate(){try{JSONArray refreshed=contentUpdates.activeBooks();if(refreshed==null)return;
+        books=refreshed;searchIndex=null;bookIndex=Math.min(bookIndex,books.length()-1);int number=verses.get(selected).number;
+        loadBook(bookIndex);for(int i=0;i<verses.size();i++)if(verses.get(i).number==number){selected=i;break;}
+        showHome();
+    }catch(Exception e){android.util.Log.w("ContentUpdates","New snapshot could not be shown",e);}}
     private String readAsset(String name)throws Exception{try(InputStream in=getAssets().open(name);ByteArrayOutputStream bytes=new ByteArrayOutputStream()){
         byte[] buffer=new byte[8192];int n;while((n=in.read(buffer))!=-1)bytes.write(buffer,0,n);return bytes.toString("UTF-8");}}
     private void loadBook(int which){try{
-        JSONObject meta=books.getJSONObject(which);JSONObject data=new JSONObject(readAsset("books/"+meta.getString("file")));
+        JSONObject meta=books.getJSONObject(which);String file=meta.getString("file");String newer=contentUpdates.readBook(file);
+        JSONObject data=new JSONObject(newer==null?readAsset("books/"+file):newer);
         ArrayList<Verse> parsed=new ArrayList<>();JSONArray sections=data.getJSONArray("sections");
         for(int s=0;s<sections.length();s++){JSONArray ps=sections.getJSONObject(s).getJSONArray("p");for(int i=0;i<ps.length();i++){
             JSONArray row=ps.getJSONArray(i);String tamil=join(row.getJSONArray(3)),latin=join(row.getJSONArray(2)),audio=row.optString(5,"");
@@ -131,6 +143,11 @@ public final class MainActivity extends Activity {
         }
     }
     private void showHome(){page="Home";start("Divya Prabandham","Offline · 25 prabandhams","Home");
+        String gate=getSharedPreferences("content-settings",MODE_PRIVATE).getString("update-required",null);
+        if(gate!=null){LinearLayout warning=card(body);add(warning,text("App update required for new content",16,ac(),true));
+            add(warning,text("You can keep reading the saved offline edition. New content needs a newer app version.",13,fg(),false));
+            add(warning,button("Update app",this::showAppUpdate,false));}
+        add(card(body),button("Content settings",this::showContentSettings,false));
         TextView invocation=text("ஸ்ரீ:",24,ac(),true);invocation.setGravity(Gravity.CENTER);pad(invocation,0,20,0,10);add(body,invocation);
         LinearLayout box=card(body);add(box,text("CONTINUE READING",11,ac(),true));
         Verse verse=verses.get(selected);TextView line=text(verse.opening(),20,fg(),false);pad(line,0,12,0,12);add(box,line);
@@ -213,6 +230,7 @@ public final class MainActivity extends Activity {
     }
     private static String value(EditText field){return field.getText().toString().trim();}
     private void showCorrectionSheet(Verse verse){
+        if(!CorrectionSubmitter.enabled()){new AlertDialog.Builder(this).setMessage("Corrections cannot be submitted from this build yet. Please keep your suggested change and try a later version.").setPositiveButton("OK",null).show();return;}
         correctionImage=null;
         final long openedAt=android.os.SystemClock.elapsedRealtime();
         LinearLayout fields=column();pad(fields,18,10,18,20);
@@ -324,6 +342,22 @@ public final class MainActivity extends Activity {
             }
         }catch(Exception ex){add(card(body),text("Could not read reports on this device.",13,muted(),false));}
     }
+        private void showContentSettings(){page="ContentSettings";start("Content settings","Automatic updates · every 8 hours","Home");
+        add(card(body),text("Reading text updates automatically when the phone has data. The saved offline edition always remains available. There is no manual check button.",14,fg(),false));
+        add(card(body),text("Images use full resolution on Wi-Fi and a lighter version on mobile data by default. Your choice below only changes image downloads.",14,fg(),false));
+        android.content.SharedPreferences prefs=getSharedPreferences("content-settings",MODE_PRIVATE);
+        String mode=prefs.getString("image-network","auto");String[] choices={"auto","wifi","light","off"};
+        String[] labels={"Auto: full Wi-Fi, light mobile","Wi-Fi only","Light images on any network","No image downloads"};
+        for(int i=0;i<choices.length;i++){final String choice=choices[i];add(card(body),button((mode.equals(choice)?"✓ ":"")+labels[i],()->{
+            prefs.edit().putString("image-network",choice).apply();showContentSettings();
+        },mode.equals(choice)));}
+        add(card(body),text("Images will appear here once sourced and published. Changing this setting never removes bundled reading text.",12,muted(),false));
+    }
+    private void showAppUpdate(){
+        String value=getSharedPreferences("content-settings",MODE_PRIVATE).getString("update-required",null);
+        if(value==null)return;new AlertDialog.Builder(this).setMessage("An app update is required for new content. The verified APK installer will be offered after its source, signature and download are checked.")
+            .setPositiveButton("OK",null).show();
+    }
     private void showSearch(){page="Search";start("Find a pasuram","Search all 4,000 · offline","Search");
         EditText input=new EditText(this);input.setTextColor(fg());input.setHintTextColor(muted());input.setSingleLine(true);input.setTextSize(16);input.setHint("Tamil, transliteration, number");pad(input,18,8,18,8);add(body,input);
         LinearLayout results=column();add(body,results);
@@ -358,7 +392,8 @@ public final class MainActivity extends Activity {
         if(searchIndex!=null)return searchIndex;
         ArrayList<SearchEntry> index=new ArrayList<>();
         for(int bi=0;bi<books.length();bi++){
-            JSONObject meta=books.getJSONObject(bi);JSONObject data=new JSONObject(readAsset("books/"+meta.getString("file")));
+            JSONObject meta=books.getJSONObject(bi);String fname=meta.getString("file");String newer=contentUpdates.readBook(fname);
+            JSONObject data=new JSONObject(newer==null?readAsset("books/"+fname):newer);
             JSONArray sections=data.getJSONArray("sections");
             for(int sec=0;sec<sections.length();sec++){JSONArray ps=sections.getJSONObject(sec).getJSONArray("p");
                 for(int i=0;i<ps.length();i++){JSONArray row=ps.getJSONArray(i);
@@ -406,7 +441,8 @@ public final class MainActivity extends Activity {
         int count=0;
         try{for(int bi=0;bi<books.length();bi++){
             JSONObject meta=books.getJSONObject(bi);if(!hasBookmarkInRange(meta.getInt("start"),meta.getInt("end")))continue;
-            JSONObject data=new JSONObject(readAsset("books/"+meta.getString("file")));
+            String fname=meta.getString("file");String newer=contentUpdates.readBook(fname);
+            JSONObject data=new JSONObject(newer==null?readAsset("books/"+fname):newer);
             for(int sec=0;sec<data.getJSONArray("sections").length();sec++){
                 JSONArray rows=data.getJSONArray("sections").getJSONObject(sec).getJSONArray("p");
                 for(int i=0;i<rows.length();i++){JSONArray row=rows.getJSONArray(i);int first=row.getInt(0);
@@ -438,6 +474,6 @@ public final class MainActivity extends Activity {
     private void showNotice(String tab){page=tab;start(tab,"Coming after the core reader",""+tab);
         add(card(body),text("The "+tab.toLowerCase(Locale.ROOT)+" screens are coming in a later update. Reading works offline.",15,fg(),false));
     }
-    @Override protected void onDestroy(){searchGeneration++;mainHandler.removeCallbacksAndMessages(null);if(currentSearch!=null)currentSearch.cancel(true);searchWorker.shutdownNow();correctionWorker.shutdownNow();super.onDestroy();}
+    @Override protected void onDestroy(){searchGeneration++;mainHandler.removeCallbacksAndMessages(null);if(currentSearch!=null)currentSearch.cancel(true);searchWorker.shutdownNow();correctionWorker.shutdownNow();updateWorker.shutdownNow();super.onDestroy();}
     @Override public void onBackPressed(){if(page.equals("Reader"))showIndex();else if(page.equals("Recite"))showBooks();else showHome();}
 }
