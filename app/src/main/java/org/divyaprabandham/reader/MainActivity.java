@@ -63,6 +63,9 @@ public final class MainActivity extends Activity {
     private long lastSearchElapsedMs=0;
     private android.os.Handler mainHandler=new android.os.Handler(android.os.Looper.getMainLooper());
     private String page="Home";
+    private String readerParent="Recite",indexParent="Books";
+    private long lastRootBackAt=0;
+    private android.window.OnBackInvokedCallback systemBackCallback;
     private boolean focusMode=false;
     private boolean correctionMode=false;
     private boolean elderMode=false;
@@ -80,6 +83,11 @@ public final class MainActivity extends Activity {
     }
     @Override public void onCreate(Bundle saved){super.onCreate(saved);getWindow().requestFeature(Window.FEATURE_NO_TITLE);
         preferences=getSharedPreferences("reading",MODE_PRIVATE);
+        // Android 13+ predictive/system back does not reliably call onBackPressed.
+        if(Build.VERSION.SDK_INT>=33){systemBackCallback=this::navigateUp;
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,systemBackCallback);
+        }
         correctionQueue=new CorrectionQueue(this);correctionDrafts=new CorrectionDrafts(this);contentUpdates=new ContentUpdates(this);ContentUpdates.schedule(this);
         theme=preferences.getInt("theme",0); selected=preferences.getInt("selected",0);textSize=preferences.getInt("size",21);
         elderMode=preferences.getBoolean("elder",false);
@@ -142,6 +150,11 @@ public final class MainActivity extends Activity {
             LinearLayout top=column();top.setGravity(Gravity.RIGHT);top.setBackground(shape(surface(),18));
             LinearLayout.LayoutParams ep=new LinearLayout.LayoutParams(-2,dp(56));ep.setMargins(0,0,dp(12),0);top.addView(exit,ep);
             root.addView(top,new LinearLayout.LayoutParams(-1,dp(60)));
+        }
+        if(!page.equals("Home")){
+            TextView up=text("‹  "+upLabel(),16,ac(),true);pad(up,20,12,20,8);
+            up.setGravity(Gravity.CENTER_VERTICAL);up.setMinimumHeight(dp(48));
+            up.setContentDescription("Back to "+upLabel());up.setOnClickListener(v->navigateUp());add(root,up);
         }
         TextView heading=text(title,27,fg(),true);pad(heading,20,15,20,0);add(root,heading);
         TextView sub=text(subtitle,12,muted(),false);pad(sub,20,3,20,13);add(root,sub);
@@ -206,7 +219,8 @@ public final class MainActivity extends Activity {
         if(shown==0)add(card(body),text("The book list could not be shown. Reading your last open book remains available.",13,muted(),false));}
     private int loadedIndexCards=0; private int searchGeneration=0;
     private ScrollView currentScroll;
-    private void showIndex(){page="Recite";start(bookName,bookAlvar+" · "+bookTamil+" · "+verses.size()+" passages","Recite");
+    private void showIndex(){if(!page.equals("Reader")&&!page.equals("Recite"))indexParent=page;
+        page="Recite";start(bookName,bookAlvar+" · "+bookTamil+" · "+verses.size()+" passages","Recite");
         add(card(body),button("All prabandhams",this::showBooks,false));
         loadedIndexCards=0;appendIndexCards();
     }
@@ -220,7 +234,8 @@ public final class MainActivity extends Activity {
         if(limit<verses.size())add(card(body),button("Show next "+Math.min(35,verses.size()-limit)+" of "+verses.size(),()->{
             if(body.getChildCount()>0)body.removeViewAt(body.getChildCount()-1);int y=currentScroll.getScrollY();appendIndexCards();currentScroll.post(()->currentScroll.scrollTo(0,y));},false));
     }
-    private void showReader(int index){selected=Math.max(0,Math.min(verses.size()-1,index));preferences.edit().putInt("selected",selected).apply();page="Reader";
+    private void showReader(int index){if(!page.equals("Reader"))readerParent=page;
+        selected=Math.max(0,Math.min(verses.size()-1,index));preferences.edit().putInt("selected",selected).apply();page="Reader";
         Verse v=verses.get(selected);start(bookName+" "+(selected+1),bookAlvar+" · "+(bookIndex==21?"pasurams 2673–2712":bookIndex==22?"pasurams 2713–2790":"pasuram "+v.number+" of 4,000"),"Recite");
         LinearLayout c=card(body);add(c,text(bookTamil+" · "+bookAlvar,15,ac(),true));
         TextView verse=text(transliteration?v.latin:v.tamil,textSize,fg(),false);verse.setTextSize(textSize+(elderMode?4:0));verse.setLineSpacing(dp(elderMode?12:7),elderMode?1.5f:1.28f);pad(verse,0,22,0,20);add(c,verse);
@@ -546,6 +561,46 @@ public final class MainActivity extends Activity {
     private void showNotice(String tab){page=tab;start(tab,"Coming after the core reader",""+tab);
         add(card(body),text("The "+tab.toLowerCase(Locale.ROOT)+" screens are coming in a later update. Reading works offline.",15,fg(),false));
     }
-    @Override protected void onDestroy(){searchGeneration++;mainHandler.removeCallbacksAndMessages(null);if(currentSearch!=null)currentSearch.cancel(true);searchWorker.shutdownNow();correctionWorker.shutdownNow();updateWorker.shutdownNow();super.onDestroy();}
-    @Override public void onBackPressed(){if(page.equals("Reader"))showIndex();else if(page.equals("Recite"))showBooks();else showHome();}
+    @Override protected void onDestroy(){if(Build.VERSION.SDK_INT>=33&&systemBackCallback!=null)
+            getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(systemBackCallback);
+        searchGeneration++;mainHandler.removeCallbacksAndMessages(null);if(currentSearch!=null)currentSearch.cancel(true);searchWorker.shutdownNow();correctionWorker.shutdownNow();updateWorker.shutdownNow();super.onDestroy();}
+    private String upLabel(){
+        switch(page){
+            case "Reader": return parentLabel(readerParent);
+            case "Recite": return parentLabel(indexParent);
+            default: return "Home";
+        }
+    }
+    private String parentLabel(String parent){
+        switch(parent){
+            case "Books": return "All prabandhams";
+            case "Recite": return bookName;
+            case "Search": return "Search";
+            case "Saved": return "Saved pasurams";
+            case "Journey": return "My journey";
+            default: return "Home";
+        }
+    }
+    private void navigateUp(){
+        switch(page){
+            case "Reader":
+                switch(readerParent){
+                    case "Recite": showIndex();return;
+                    case "Books": showBooks();return;
+                    case "Search": showSearch();return;
+                    case "Saved": showSaved();return;
+                    case "Journey": showJourney();return;
+                    default: showHome();return;
+                }
+            case "Recite":
+                if(indexParent.equals("Journey"))showJourney();else if(indexParent.equals("Home"))showHome();else showBooks();
+                return;
+            case "Home":
+                long now=android.os.SystemClock.elapsedRealtime();
+                if(now-lastRootBackAt<2000){finish();return;}
+                lastRootBackAt=now;Toast.makeText(this,"Press back again to exit",Toast.LENGTH_SHORT).show();return;
+            default: showHome();
+        }
+    }
+    @Override public void onBackPressed(){navigateUp();}
 }
