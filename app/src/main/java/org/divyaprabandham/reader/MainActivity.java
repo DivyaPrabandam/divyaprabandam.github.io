@@ -261,7 +261,7 @@ public final class MainActivity extends Activity {
     }
     private void exitCorrectionMode(){correctionMode=false;
         if(page.equals("Reader"))showReader(selected);else showHome();
-        android.widget.Toast.makeText(this,"Correction mode off. Saved reports remain on this phone.",android.widget.Toast.LENGTH_SHORT).show();
+        android.widget.Toast.makeText(this,"Correction mode off. Drafts remain on this phone.",android.widget.Toast.LENGTH_SHORT).show();
     }
     private EditText correctionInput(String label,String value,int max,LinearLayout container){
         TextView heading=text(label,13,fg(),true);pad(heading,0,12,0,0);add(container,heading);
@@ -285,12 +285,16 @@ public final class MainActivity extends Activity {
         String[] imageCategories={"Wrong temple or deity","Poor quality","Wrong credit","Other"};
         String[] audioCategories={"Does not play","Wrong pasuram","Poor quality"};
         Spinner category=new Spinner(this);add(fields,category);
+        final String previousCategory=savedDraft.optString("category","");
         kind.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
             public void onNothingSelected(android.widget.AdapterView<?> parent){}
             public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
                 String selected=kinds[position];boolean required=selected.equals("image")||selected.equals("audio");
                 category.setVisibility(required?View.VISIBLE:View.GONE);categoryLabel.setVisibility(required?View.VISIBLE:View.GONE);
-                if(required)category.setAdapter(new ArrayAdapter<>(MainActivity.this,android.R.layout.simple_spinner_dropdown_item,selected.equals("image")?imageCategories:audioCategories));
+                if(required){String[] options=selected.equals("image")?imageCategories:audioCategories;
+                    category.setAdapter(new ArrayAdapter<>(MainActivity.this,android.R.layout.simple_spinner_dropdown_item,options));
+                    for(int i=0;i<options.length;i++)if(options[i].equals(previousCategory)){category.setSelection(i);break;}
+                }
             }
         });
         EditText screen=correctionInput("Screen name or route (page reports)", savedDraft.optString("page","app:/reader/"+verse.number),300,fields);
@@ -307,15 +311,20 @@ public final class MainActivity extends Activity {
         ScrollView scroll=new ScrollView(this);scroll.addView(fields);
         AlertDialog dialog=new AlertDialog.Builder(this).setView(scroll).setNegativeButton("Close",(d,w)->{})
             .setPositiveButton(CorrectionSubmitter.enabled()?"Submit correction":"Save draft",null).create();
-        dialog.setOnDismissListener(d->{try{JSONObject draft=new JSONObject();draft.put("kind",kind.getSelectedItem().toString());
-                draft.put("page",value(screen));draft.put("ta",value(correctedTamil));draft.put("en",value(correctedLatin));
-                draft.put("note",value(note));draft.put("source",value(source));draft.put("name",value(name));
-                if(correctionImage!=null)draft.put("image",correctionImage);
-                correctionDrafts.save(verse.number,draft);
-            }catch(Exception ex){Toast.makeText(this,"Draft could not be saved",Toast.LENGTH_LONG).show();}
+        final boolean[] submitted={false};
+        final boolean[] draftSaved={false};
+        dialog.setOnDismissListener(d->{if(!submitted[0]&&!draftSaved[0]){
+                if(!saveCorrectionDraft(verse.number,kind,category,screen,correctedTamil,correctedLatin,note,source,name))
+                    Toast.makeText(this,"Draft could not be saved",Toast.LENGTH_LONG).show();
+            }
             correctionImage=null;correctionImageStatus=null;});
         dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
-            if(!CorrectionSubmitter.enabled()){dialog.dismiss();Toast.makeText(this,"Draft saved privately",Toast.LENGTH_SHORT).show();return;}
+            if(!CorrectionSubmitter.enabled()){
+                if(saveCorrectionDraft(verse.number,kind,category,screen,correctedTamil,correctedLatin,note,source,name)){
+                    draftSaved[0]=true;dialog.dismiss();Toast.makeText(this,"Draft saved privately",Toast.LENGTH_SHORT).show();
+                }else Toast.makeText(this,"Draft could not be saved",Toast.LENGTH_LONG).show();
+                return;
+            }
             try{
                 String detail=value(note), imageSource=value(source), selectedKind=kind.getSelectedItem().toString();
                 if(selectedKind.equals("text")&&value(correctedTamil).isEmpty()&&value(correctedLatin).isEmpty()){
@@ -338,7 +347,8 @@ public final class MainActivity extends Activity {
                 report.put("source",imageSource);report.put("name",value(name));
                 if(correctionImage!=null)report.put("image",correctionImage);
                 report.put("hp","");report.put("ms",ms);
-                correctionQueue.append(report);CorrectionSubmitter.schedule(this);dialog.dismiss();
+                correctionQueue.append(report);CorrectionSubmitter.schedule(this);submitted[0]=true;
+                correctionDrafts.delete(verse.number);dialog.dismiss();
                 Toast.makeText(this,"Report saved. Submitting in the background.",Toast.LENGTH_LONG).show();
                 correctionWorker.execute(()->{CorrectionSubmitter.Outcome result=CorrectionSubmitter.submitPending(this);
                     if(result.queued>0)CorrectionSubmitter.schedule(this);
@@ -349,6 +359,17 @@ public final class MainActivity extends Activity {
         }));
         dialog.show();
         dialog.getWindow().setBackgroundDrawable(shape(surface(),18));
+    }
+    private boolean saveCorrectionDraft(int number,Spinner kind,Spinner category,EditText screen,
+                                        EditText tamil,EditText latin,EditText note,EditText source,EditText name){
+        try{JSONObject draft=new JSONObject();draft.put("kind",kind.getSelectedItem().toString());
+            if(category.getVisibility()==View.VISIBLE&&category.getSelectedItem()!=null)
+                draft.put("category",category.getSelectedItem().toString());
+            draft.put("page",value(screen));draft.put("ta",value(tamil));draft.put("en",value(latin));
+            draft.put("note",value(note));draft.put("source",value(source));draft.put("name",value(name));
+            if(correctionImage!=null)draft.put("image",correctionImage);
+            correctionDrafts.save(number,draft);return true;
+        }catch(Exception ex){android.util.Log.w("Corrections","Draft save failed",ex);return false;}
     }
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
         super.onActivityResult(requestCode,resultCode,data);
