@@ -63,6 +63,7 @@ public final class MainActivity extends Activity {
     private android.os.Handler mainHandler=new android.os.Handler(android.os.Looper.getMainLooper());
     private String page="Home";
     private boolean focusMode=false;
+    private boolean correctionMode=false;
     private boolean elderMode=false;
     private boolean bookmarked(int n){return preferences.getBoolean("saved-"+n,false);}
     private void setBookmark(int n,boolean value){preferences.edit().putBoolean("saved-"+n,value).apply();}
@@ -136,6 +137,11 @@ public final class MainActivity extends Activity {
             return insets;
         });
         setContentView(root);
+        if(correctionMode){Button exit=button("Exit correction mode",this::exitCorrectionMode,true);
+            LinearLayout top=column();top.setGravity(Gravity.RIGHT);top.setBackground(shape(surface(),18));
+            LinearLayout.LayoutParams ep=new LinearLayout.LayoutParams(-2,dp(56));ep.setMargins(0,0,dp(12),0);top.addView(exit,ep);
+            root.addView(top,new LinearLayout.LayoutParams(-1,dp(60)));
+        }
         TextView heading=text(title,27,fg(),true);pad(heading,20,15,20,0);add(root,heading);
         TextView sub=text(subtitle,12,muted(),false);pad(sub,20,3,20,13);add(root,sub);
         ScrollView scroll=new ScrollView(this);currentScroll=scroll;scroll.setFillViewport(true);scroll.setVerticalScrollBarEnabled(false);body=column();scroll.addView(body);
@@ -171,6 +177,8 @@ public final class MainActivity extends Activity {
         add(journey,button("Open my journey",this::showJourney,false));
         add(card(body),button("Saved pasurams",this::showSaved,false));
         add(card(body),button("Correction reports",this::showCorrectionReports,false));
+        add(card(body),button(correctionMode?"Exit correction mode":"Enter correction mode",()->{
+            if(correctionMode)exitCorrectionMode();else enterCorrectionMode();},correctionMode));
         LinearLayout themes=card(body);add(themes,text("Appearance · same navigation in every theme",14,fg(),true));
         LinearLayout choices=new LinearLayout(this);pad(choices,0,10,0,0);add(themes,choices);
         for(int i=0;i<NAMES.length;i++){final int t=i;Button pick=button(NAMES[i],()->{theme=t;preferences.edit().putInt("theme",theme).apply();showHome();},i==theme);
@@ -218,13 +226,15 @@ public final class MainActivity extends Activity {
         if(bookIndex==21||bookIndex==22)add(c,text("This complete madal is one source passage covering a numbered range; individual verse boundaries are not marked in the site data.",11,muted(),false));
         if(!focusMode)
             add(c,text("Text: bundled verbatim from the site edition · recitation marks kept",11,muted(),false));
+        if(correctionMode){LinearLayout mode=card(body);add(mode,text("CORRECTION MODE · reading text is unchanged",14,ac(),true));
+            add(mode,text("The highlighted correction controls are separate from ordinary reading.",12,muted(),false));}
         LinearLayout reading=card(body);
         boolean focused=focusMode;
         add(reading,button(focused?"Exit focus":"Focus on this pasuram",()->{
             focusMode=!focusMode;showReader(selected);
         },focused));
         if(bookIndex==21||bookIndex==22)add(reading,text("For this long madal, marking read applies to the entire source passage, not each number in its range.",11,muted(),false));
-        add(reading,button("Suggest a correction",()->showCorrectionSheet(v),false));
+        if(correctionMode)add(reading,button("Suggest a correction",()->showCorrectionSheet(v),true));
         add(reading,button(bookmarked(v.number)?"★ Saved · tap to remove":"☆ Save pasuram",()->{
             setBookmark(v.number,!bookmarked(v.number));showReader(selected);
         },bookmarked(v.number)));
@@ -240,6 +250,17 @@ public final class MainActivity extends Activity {
         Button previous=button("‹ Previous",()->showReader(selected-1),false);previous.setEnabled(selected>0);buttons.addView(previous,new LinearLayout.LayoutParams(0,dp(48),1));
         Button next=button("Next ›",()->showReader(selected+1),true);next.setEnabled(selected<verses.size()-1);buttons.addView(next,new LinearLayout.LayoutParams(0,dp(48),1));
         if(!focused)add(card(body),text("Audio playback is coming in the next milestone.",11,muted(),false));
+
+    }
+    private void enterCorrectionMode(){
+        new AlertDialog.Builder(this).setTitle("Correction mode")
+            .setMessage("Correction controls are highlighted while this mode is on. Reading text is unchanged. Reports cannot be sent from this build yet.")
+            .setPositiveButton("Continue",(d,w)->{correctionMode=true;if(page.equals("Reader"))showReader(selected);else showHome();})
+            .setNegativeButton("Cancel",null).show();
+    }
+    private void exitCorrectionMode(){correctionMode=false;
+        if(page.equals("Reader"))showReader(selected);else showHome();
+        android.widget.Toast.makeText(this,"Correction mode off. Saved reports remain on this phone.",android.widget.Toast.LENGTH_SHORT).show();
     }
     private EditText correctionInput(String label,String value,int max,LinearLayout container){
         TextView heading=text(label,13,fg(),true);pad(heading,0,12,0,0);add(container,heading);
