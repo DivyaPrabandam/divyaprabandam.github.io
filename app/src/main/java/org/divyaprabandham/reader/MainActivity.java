@@ -250,7 +250,7 @@ public final class MainActivity extends Activity {
         Verse verse=verses.get(selected);TextView line=text(verse.opening(),20,fg(),false);pad(line,0,12,0,12);add(box,line);
         add(box,text(bookName+" · "+bookAlvar+" · "+verse.number+" of 4,000",12,muted(),false));
         Button cont=button("Read pasuram",()->showReader(selected),true);pad(cont,12,4,12,4);add(box,cont);
-        LinearLayout b=card(body);add(b,text(bookName,21,fg(),true));add(b,text(bookTamil+" · "+bookAlvar+" · "+verses.size()+" passages",13,muted(),false));
+        LinearLayout b=card(body);add(b,text(bookName,21,fg(),true));add(b,text(bookTamil+" · "+bookAlvar+" · "+passageCountLabel(),13,muted(),false));
         add(b,button("Continue in "+bookName,this::showIndex,false));
         add(card(body),button("Browse all 25 prabandhams",this::showBooks,true));
         LinearLayout quick=card(body);add(quick,text("YOUR LIBRARY",11,ac(),true));
@@ -291,16 +291,22 @@ public final class MainActivity extends Activity {
             }catch(Exception ex){android.util.Log.w("Books","Skipping malformed list entry "+i,ex);}
         }
         if(shown==0)add(card(body),text("The book list could not be shown. Reading your last open book remains available.",13,muted(),false));}
+    private boolean madalBook(){return bookIndex==21||bookIndex==22;}
+    private int madalFirst(){return bookIndex==21?2673:2713;}
+    private int madalLast(){return bookIndex==21?2712:2790;}
+    private int madalNumberedCount(){return madalLast()-madalFirst()+1;}
+    private String passageCountLabel(){return madalBook()?madalNumberedCount()+" numbered pasurams · 1 continuous source passage":verses.size()+" passages";}
     private int loadedIndexCards=0; private int searchGeneration=0;
     private ScrollView currentScroll;
     private void showIndex(){if(!page.equals("Reader")&&!page.equals("Recite"))indexParent=page;
-        page="Recite";start(bookName,bookAlvar+" · "+bookTamil+" · "+verses.size()+" passages","Recite");
+        page="Recite";start(bookName,bookAlvar+" · "+bookTamil+" · "+passageCountLabel(),"Recite");
         loadedIndexCards=0;appendIndexCards();
     }
     private void appendIndexCards(){int limit=Math.min(loadedIndexCards+35,verses.size());
         for(int i=loadedIndexCards;i<limit;i++){final int index=i;Verse v=verses.get(i);LinearLayout c=card(body);
-            TextView line=text(v.number+"  "+v.opening(),16,fg(),false);pad(line,0,1,0,5);add(c,line);
-            add(c,text(bookAlvar+" · "+bookName+" "+(i+1),11,muted(),false));
+            TextView line=text((madalBook()?"Pasurams "+madalFirst()+"–"+madalLast():"Pasuram "+v.number)+"  "+v.opening(),16,fg(),false);
+            pad(line,0,1,0,5);add(c,line);
+            add(c,text(madalBook()?madalNumberedCount()+" numbered pasurams · 1 continuous source passage":bookAlvar+" · "+bookName+" "+(i+1),11,muted(),false));
             c.setOnClickListener(w->showReader(index));c.setMinimumHeight(dp(72));
         }
         loadedIndexCards=limit;
@@ -309,7 +315,8 @@ public final class MainActivity extends Activity {
     }
     private void showReader(int index){if(!page.equals("Reader"))readerParent=page;
         selected=Math.max(0,Math.min(verses.size()-1,index));preferences.edit().putInt("selected",selected).apply();page="Reader";
-        Verse v=verses.get(selected);start(bookName+" "+(selected+1),bookAlvar+" · "+(bookIndex==21?"pasurams 2673–2712":bookIndex==22?"pasurams 2713–2790":"pasuram "+v.number+" of 4,000"),"Recite");
+        Verse v=verses.get(selected);start(madalBook()?bookName+" · pasurams "+madalFirst()+"–"+madalLast():bookName+" "+(selected+1),
+            bookAlvar+" · "+(madalBook()?passageCountLabel():"pasuram "+v.number+" of 4,000"),"Recite");
         LinearLayout c=card(body);
         LinearLayout verseHeading=new LinearLayout(this);verseHeading.setGravity(Gravity.CENTER_VERTICAL);add(c,verseHeading);
         TextView source=text(bookTamil+" · "+bookAlvar,15,ac(),true);
@@ -965,12 +972,13 @@ public final class MainActivity extends Activity {
     private boolean hasBookmarkInRange(int first,int last){for(int n=first;n<=last;n++)if(bookmarked(n))return true;return false;}
     private void showJourney(){page="Journey";start("My 4,000 journey","Private on this device · no streaks","Home");
         int total=readCount();LinearLayout overview=card(body);add(overview,text(total+" marks across 4,000 numbered pasurams",23,ac(),true));
-        add(overview,text("The two long madals count as one complete source passage each. Audio playback will not change this count.",13,muted(),false));
+        add(overview,text("The two long madals cover 40 and 78 numbered pasurams, but each is one continuous source passage without per-number boundaries. Marking a madal read applies to its whole passage.",13,muted(),false));
         try{for(int i=0;i<books.length();i++){JSONObject meta=books.getJSONObject(i);int n=0;
             for(int id=meta.getInt("start");id<=meta.getInt("end");id++)if(isRead(id))n++;
             LinearLayout c=card(body);add(c,text(meta.getString("name"),17,fg(),true));
             int bookTotal=(meta.getInt("end")-meta.getInt("start")+1);
-            if(i==21||i==22)add(c,text(isRead(meta.getInt("start"))?"Complete madal marked read":"Madal not marked read",12,muted(),false));
+            if(i==21||i==22)add(c,text((meta.getInt("end")-meta.getInt("start")+1)+" numbered pasurams · 1 continuous source passage · "+
+                (isRead(meta.getInt("start"))?"whole passage marked read":"whole passage not marked read"),12,muted(),false));
             else add(c,text(n+" of "+bookTotal+" numbered pasurams",12,muted(),false));
             final int book=i;c.setOnClickListener(v->{loadBook(book);selected=0;preferences.edit().putInt("book",book).putInt("selected",0).apply();showIndex();});
         }}catch(Exception e){throw new IllegalStateException("Journey book metadata unavailable",e);}
