@@ -212,6 +212,7 @@ public final class MainActivity extends Activity {
         bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER);bar.setBackgroundColor(bg());pad(bar,7,8,7,8);
         navExpandedHeight=dp(elderMode?74:68);
         if(!page.equals("Reader"))dockNavShown=true;
+        else dockNavShown=true;
         root.addView(bar,new LinearLayout.LayoutParams(-1,dockNavShown?navExpandedHeight:0));
         scroll.setOnScrollChangeListener((View v,int x,int y,int oldX,int oldY)->{
             if(audioController==null||audioController.track()==null)return;
@@ -219,9 +220,9 @@ public final class MainActivity extends Activity {
             if(Math.abs(delta)<dp(5))return;
             setDockNavShown(delta<0);
         });
-        String[] tabs={"Home","Recite","Learn","Explore","Search"};for(String tab:tabs){
+        String[] tabs={"Home","Recite","Learn","Explore","Search","Settings"};for(String tab:tabs){
             TextView link=text(tab,11,active.equals(tab)?ac():muted(),active.equals(tab));link.setGravity(Gravity.CENTER);link.setMinimumHeight(dp(elderMode?56:48));
-            bar.addView(link,new LinearLayout.LayoutParams(0,dp(elderMode?58:52),1));link.setOnClickListener(v->{switch(tab){case "Home":showHome();break;case "Search":showSearch();break;case "Recite":showBooks();break;default:showNotice(tab);}});
+            bar.addView(link,new LinearLayout.LayoutParams(0,dp(elderMode?58:52),1));link.setOnClickListener(v->{switch(tab){case "Home":showHome();break;case "Search":showSearch();break;case "Recite":showBooks();break;case "Settings":showSettings();break;default:showNotice(tab);}});
         }
     }
     private void setDockNavShown(boolean visible){
@@ -268,6 +269,7 @@ public final class MainActivity extends Activity {
             elderMode=!elderMode;preferences.edit().putBoolean("elder",elderMode).apply();showHome();
         },elderMode));
         add(card(body),text("All 4,000 numbered pasurams are available offline. Recitation can stream or be saved one track at a time.",13,muted(),false));
+        add(card(body),button("All settings",this::showSettings,false));
     }
     private void showBooks(){page="Books";start("The 4,000 pasurams","25 prabandhams · offline","Recite");
         int shown=0;
@@ -544,7 +546,7 @@ public final class MainActivity extends Activity {
         if(window!=null)window.setLayout(-1,Math.min(dp(530),(int)(getResources().getDisplayMetrics().heightPixels*.74f)));
         updateAudioControls();
     }
-    private void showCurrentPage(){switch(page){case "Reader":showReader(selected);break;case "Home":showHome();break;case "Books":showBooks();break;case "ContentSettings":showContentSettings();break;default:break;}}
+    private void showCurrentPage(){switch(page){case "Reader":showReader(selected);break;case "Home":showHome();break;case "Books":showBooks();break;case "ContentSettings":showContentSettings();break;case "Settings":showSettings();break;default:break;}}
     private void playAudio(ArrayList<AudioCatalog.Track> tracks,int start){
         if(tracks.isEmpty()){Toast.makeText(this,"No recording for this passage yet.",Toast.LENGTH_LONG).show();return;}
         audioController.play(tracks,start);showCurrentPage();
@@ -745,6 +747,58 @@ public final class MainActivity extends Activity {
                             catch(Exception ex){Toast.makeText(this,"Could not delete report",Toast.LENGTH_LONG).show();}}).show(),false));}
             }
         }catch(Exception ex){add(card(body),text("Could not read reports on this device.",13,muted(),false));}
+    }
+    private void showSettings(){
+        page="Settings";start("Settings","Reading, opening, audio and updates","Settings");
+        LinearLayout opening=card(body);add(opening,text("OPENING",13,ac(),true));
+        android.content.SharedPreferences intro=getSharedPreferences("intro",MODE_PRIVATE);
+        boolean skip=intro.getBoolean("skip-future",false),muted=intro.getBoolean("music-off",false);
+        add(opening,button(skip?"Opening animation: Off":"Opening animation: On",()->{
+            intro.edit().putBoolean("skip-future",!skip).apply();showSettings();
+        },false));
+        add(opening,button(muted?"Opening music: Off":"Opening music: On",()->{
+            intro.edit().putBoolean("music-off",!muted).apply();showSettings();
+        },false));
+        add(opening,text("Music controls only the opening song. The animation still plays silently.",11,muted(),false));
+        LinearLayout audio=card(body);add(audio,text("PLAYER",13,ac(),true));
+        if(audioController!=null){
+            add(audio,button("Playback speed: "+String.format(java.util.Locale.ROOT,"%.2f×",audioController.speed()),()->{
+                SpeedDial dial=new SpeedDial(this,audioController.speed(),audioController::speed);
+                new AlertDialog.Builder(this).setTitle("Playback speed").setView(dial)
+                    .setPositiveButton("Done",(d,w)->showSettings()).show();
+            },false));
+            add(audio,button("Open player controls",()->{
+                if(audioController.track()!=null)showPlayerSheet();
+                else Toast.makeText(this,"Play a pasuram first to open controls",Toast.LENGTH_SHORT).show();
+            },false));
+        }
+        add(audio,text("Offline audio is saved per recording from the player. Repeat and A–B controls are in the player sheet.",11,muted(),false));
+        LinearLayout rotation=card(body);add(rotation,text("ROTATION",13,ac(),true));
+        boolean right=preferences.getBoolean("player-side-right",false);
+        add(rotation,button("Landscape player: "+(right?"Right":"Left"),()->{
+            preferences.edit().putBoolean("player-side-right",!right).apply();showSettings();
+        },false));
+        add(rotation,text("Rotate your phone for the slim side player. You can also change its side there.",11,muted(),false));
+        LinearLayout reading=card(body);add(reading,text("READING",13,ac(),true));
+        add(reading,button(transliteration?"Text: English transliteration":"Text: தமிழ்",()->{
+            transliteration=!transliteration;preferences.edit().putBoolean("transliteration",transliteration).apply();showSettings();
+        },false));
+        LinearLayout size=new LinearLayout(this);add(reading,size);
+        size.addView(button("A−",()->{textSize=Math.max(16,textSize-2);preferences.edit().putInt("size",textSize).apply();showSettings();},false),new LinearLayout.LayoutParams(0,dp(48),1));
+        TextView current=text("Pasuram text "+textSize,12,fg(),false);current.setGravity(Gravity.CENTER);
+        size.addView(current,new LinearLayout.LayoutParams(0,dp(48),2));
+        size.addView(button("A+",()->{textSize=Math.min(34,textSize+2);preferences.edit().putInt("size",textSize).apply();showSettings();},false),new LinearLayout.LayoutParams(0,dp(48),1));
+        add(reading,button(elderMode?"Elder mode: On":"Elder mode: Off",()->{
+            elderMode=!elderMode;preferences.edit().putBoolean("elder",elderMode).apply();showSettings();
+        },false));
+        LinearLayout appearance=card(body);add(appearance,text("APPEARANCE",13,ac(),true));
+        LinearLayout themes=new LinearLayout(this);add(appearance,themes);
+        for(int i=0;i<NAMES.length;i++){final int t=i;Button pick=button(NAMES[i],()->{
+            theme=t;preferences.edit().putInt("theme",theme).apply();showSettings();
+        },i==theme);pick.setTextSize(10);themes.addView(pick,new LinearLayout.LayoutParams(0,dp(48),1));}
+        LinearLayout content=card(body);add(content,text("CONTENT",13,ac(),true));
+        add(content,button("Content updates and image network settings",this::showContentSettings,false));
+        add(content,text("These settings also remain where you normally use them.",11,muted(),false));
     }
         private void showContentSettings(){page="ContentSettings";start("Content settings","Automatic updates · every 8 hours","Home");
         add(card(body),text("Reading text checks automatically every 8 hours when the phone has data. You can also check now. The saved edition remains available offline.",14,fg(),false));

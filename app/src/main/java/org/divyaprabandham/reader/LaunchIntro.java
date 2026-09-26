@@ -37,6 +37,7 @@ public final class LaunchIntro extends Activity {
     @Override public void onCreate(Bundle state){
         super.onCreate(state);getWindow().requestFeature(Window.FEATURE_NO_TITLE);
         if(getSharedPreferences("intro",MODE_PRIVATE).getBoolean("skip-future",false)){enterApp();return;}
+        introMuted=getSharedPreferences("intro",MODE_PRIVATE).getBoolean("music-off",false);
         FrameLayout stage=new FrameLayout(this);stage.setBackgroundColor(0xff190f09);
         front=new ImageView(this);back=new ImageView(this);
         front.setScaleType(ImageView.ScaleType.FIT_CENTER);back.setScaleType(ImageView.ScaleType.FIT_CENTER);
@@ -46,8 +47,8 @@ public final class LaunchIntro extends Activity {
         skip.setGravity(Gravity.CENTER);skip.setContentDescription("Skip opening intro");
         FrameLayout.LayoutParams sp=new FrameLayout.LayoutParams(dp(110),dp(48),Gravity.TOP|Gravity.END);
         sp.topMargin=dp(24);sp.rightMargin=dp(16);stage.addView(skip,sp);
-        sound=new TextView(this);sound.setText("♪ Sound on");sound.setTextSize(14);sound.setTextColor(Color.WHITE);
-        sound.setGravity(Gravity.CENTER);sound.setContentDescription("Mute opening music");
+        sound=new TextView(this);sound.setText(introMuted?"♪ Muted":"♪ Sound on");sound.setTextSize(14);sound.setTextColor(Color.WHITE);
+        sound.setGravity(Gravity.CENTER);sound.setContentDescription(introMuted?"Unmute opening music":"Mute opening music");
         FrameLayout.LayoutParams soundParams=new FrameLayout.LayoutParams(dp(120),dp(48),Gravity.TOP|Gravity.START);
         soundParams.topMargin=dp(24);soundParams.leftMargin=dp(16);stage.addView(sound,soundParams);
         sound.setOnClickListener(v->{introMuted=!introMuted;mutePlayback(introMuted);sound.setText(introMuted?"♪ Muted":"♪ Sound on");
@@ -65,7 +66,7 @@ public final class LaunchIntro extends Activity {
             if(player==null){enterApp();return;}
             player.setOnCompletionListener(mp->enterApp());
             player.setOnErrorListener((mp,what,extra)->{enterApp();return true;});
-            player.start();
+            mutePlayback(introMuted);player.start();
             frameTick=new Runnable(){public void run(){
                 if(!leaving&&player!=null){
                     long position=player.getCurrentPosition();int index=0;
