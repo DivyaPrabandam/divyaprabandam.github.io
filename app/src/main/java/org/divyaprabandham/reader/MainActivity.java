@@ -196,14 +196,17 @@ public final class MainActivity extends Activity {
             LinearLayout.LayoutParams ep=new LinearLayout.LayoutParams(-2,dp(56));ep.setMargins(0,0,dp(12),0);top.addView(exit,ep);
             root.addView(top,new LinearLayout.LayoutParams(-1,dp(60)));
         }
+        ScrollView scroll=new ScrollView(this);currentScroll=scroll;scroll.setFillViewport(true);
+        scroll.setVerticalScrollBarEnabled(false);body=column();scroll.addView(body);
+        // The reader header belongs to scroll content, never a fixed pane above the verse.
+        LinearLayout headingHost=page.equals("Reader")?body:root;
         if(!page.equals("Home")){
             TextView up=text("‹  "+upLabel(),16,ac(),true);pad(up,20,12,20,8);
             up.setGravity(Gravity.CENTER_VERTICAL);up.setMinimumHeight(dp(48));
-            up.setContentDescription("Back to "+upLabel());up.setOnClickListener(v->navigateUp());add(root,up);
+            up.setContentDescription("Back to "+upLabel());up.setOnClickListener(v->navigateUp());add(headingHost,up);
         }
-        TextView heading=text(title,27,fg(),true);pad(heading,20,15,20,0);add(root,heading);
-        TextView sub=text(subtitle,12,muted(),false);pad(sub,20,3,20,13);add(root,sub);
-        ScrollView scroll=new ScrollView(this);currentScroll=scroll;scroll.setFillViewport(true);scroll.setVerticalScrollBarEnabled(false);body=column();scroll.addView(body);
+        TextView heading=text(title,27,fg(),true);pad(heading,20,15,20,0);add(headingHost,heading);
+        TextView sub=text(subtitle,12,muted(),false);pad(sub,20,3,20,13);add(headingHost,sub);
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         if(audioController!=null&&audioController.track()!=null&&!landscapePlayer)showMiniAudio();
         bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER);bar.setBackgroundColor(bg());pad(bar,7,8,7,8);
@@ -301,13 +304,30 @@ public final class MainActivity extends Activity {
     private void showReader(int index){if(!page.equals("Reader"))readerParent=page;
         selected=Math.max(0,Math.min(verses.size()-1,index));preferences.edit().putInt("selected",selected).apply();page="Reader";
         Verse v=verses.get(selected);start(bookName+" "+(selected+1),bookAlvar+" · "+(bookIndex==21?"pasurams 2673–2712":bookIndex==22?"pasurams 2713–2790":"pasuram "+v.number+" of 4,000"),"Recite");
-        // Listening remains reachable before the full verse text, including long madals.
-        if(audioCatalog!=null&&audioController!=null)addReaderAudio(v);
-        LinearLayout c=card(body);add(c,text(bookTamil+" · "+bookAlvar,15,ac(),true));
+        LinearLayout c=card(body);
+        LinearLayout verseHeading=new LinearLayout(this);verseHeading.setGravity(Gravity.CENTER_VERTICAL);add(c,verseHeading);
+        TextView source=text(bookTamil+" · "+bookAlvar,15,ac(),true);
+        verseHeading.addView(source,new LinearLayout.LayoutParams(0,-2,1));
+        AudioCatalog.Track currentTrack=audioCatalog==null?null:audioCatalog.verse(v.number);
+        if(currentTrack!=null||audioCatalog!=null&&!audioCatalog.recordings(books.optJSONObject(bookIndex).optString("id"),
+            audioCatalog.groupRange(books.optJSONObject(bookIndex).optString("id"),v.number,books.optJSONObject(bookIndex).optInt("end"))[0]).isEmpty()){
+            Button play=button("▶",()->{
+                AudioCatalog.Track one=audioCatalog.verse(v.number);
+                ArrayList<AudioCatalog.Track> tracks=new ArrayList<>();
+                if(one!=null)tracks.add(one);
+                else tracks=audioCatalog.recordings(books.optJSONObject(bookIndex).optString("id"),
+                    audioCatalog.groupRange(books.optJSONObject(bookIndex).optString("id"),v.number,books.optJSONObject(bookIndex).optInt("end"))[0]);
+                if(!tracks.isEmpty()){ArrayList<AudioCatalog.Track> single=new ArrayList<>();single.add(tracks.get(0));playAudio(single,0);}
+            },true);
+            play.setContentDescription("Play pasuram "+v.number);
+            GradientDrawable circle=shape(ac(),48);play.setBackground(circle);
+            verseHeading.addView(play,new LinearLayout.LayoutParams(dp(46),dp(46)));
+        }
         TextView verse=text(transliteration?v.latin:v.tamil,textSize,fg(),false);verse.setTextSize(textSize+(elderMode?4:0));verse.setLineSpacing(dp(elderMode?12:7),elderMode?1.5f:1.28f);pad(verse,0,22,0,20);add(c,verse);
         if(bookIndex==21||bookIndex==22)add(c,text("This complete madal is one source passage covering a numbered range; individual verse boundaries are not marked in the site data.",11,muted(),false));
         if(!focusMode)
             add(c,text("Text: bundled verbatim from the site edition · recitation marks kept",11,muted(),false));
+        if(!focusMode&&audioCatalog!=null&&audioController!=null)addReaderAudio(v);
         if(correctionMode){LinearLayout mode=card(body);add(mode,text("CORRECTION MODE · reading text is unchanged",14,ac(),true));
             add(mode,text("The highlighted correction controls are separate from ordinary reading.",12,muted(),false));}
         LinearLayout reading=card(body);
@@ -515,22 +535,36 @@ public final class MainActivity extends Activity {
         audioController.play(tracks,start);showCurrentPage();
     }
     private void addReaderAudio(Verse currentVerse){
-        LinearLayout panel=card(body);add(panel,text("LISTEN",13,ac(),true));
+        LinearLayout panel=card(body);
         AudioCatalog.Track individual=audioCatalog.verse(currentVerse.number);
-        if(individual!=null){
-            add(panel,button("Play this pasuram",()->{ArrayList<AudioCatalog.Track> one=new ArrayList<>();one.add(individual);playAudio(one,0);},true));
-            int[] range=audioCatalog.groupRange(books.optJSONObject(bookIndex).optString("id"),currentVerse.number,books.optJSONObject(bookIndex).optInt("end"));
-            ArrayList<AudioCatalog.Track> group=new ArrayList<>();int startIndex=0;
-            for(int n=range[0];n<=range[1];n++){AudioCatalog.Track item=audioCatalog.verse(n);if(item!=null){if(n==currentVerse.number)startIndex=group.size();group.add(item);}}
-            if(group.size()>1){final int from=startIndex;add(panel,button("Play group "+range[0]+"–"+range[1]+" ("+group.size()+" tracks)",()->{
-                playAudio(group,from);audioController.repeatGroupOn();
-            },false));}
+        String bookId=books.optJSONObject(bookIndex).optString("id");
+        int[] range=audioCatalog.groupRange(bookId,currentVerse.number,books.optJSONObject(bookIndex).optInt("end"));
+        ArrayList<AudioCatalog.Track> group=new ArrayList<>();int startIndex=0;
+        for(int n=range[0];n<=range[1];n++){
+            AudioCatalog.Track item=audioCatalog.verse(n);
+            if(item!=null){if(n==currentVerse.number)startIndex=group.size();group.add(item);}
         }
-        ArrayList<AudioCatalog.Track> recordings=audioCatalog.recordings(books.optJSONObject(bookIndex).optString("id"),
-            audioCatalog.groupRange(books.optJSONObject(bookIndex).optString("id"),currentVerse.number,books.optJSONObject(bookIndex).optInt("end"))[0]);
-        for(AudioCatalog.Track recording:recordings){
-            add(panel,button(recordings.size()==1?"Play full group recording":"Play "+recording.title,
-                ()->{ArrayList<AudioCatalog.Track> one=new ArrayList<>();one.add(recording);playAudio(one,0);},false));
+        ArrayList<AudioCatalog.Track> recordings=audioCatalog.recordings(bookId,range[0]);
+        LinearLayout options=new LinearLayout(this);options.setGravity(Gravity.CENTER_VERTICAL);add(panel,options);
+        if(group.size()>1){final int from=startIndex;
+            Button groupPlay=button("Group "+range[0]+"–"+range[1],()->{
+                playAudio(group,from);audioController.repeatGroupOn();
+            },false);
+            groupPlay.setContentDescription("Play group "+range[0]+" to "+range[1]+" as "+group.size()+" separate tracks");
+            options.addView(groupPlay,new LinearLayout.LayoutParams(0,dp(52),1));
+        }
+        if(!recordings.isEmpty()){
+            AudioCatalog.Track recording=recordings.get(0);
+            Button full=button("Full group recording",()->{
+                ArrayList<AudioCatalog.Track> one=new ArrayList<>();one.add(recording);playAudio(one,0);
+            },false);
+            options.addView(full,new LinearLayout.LayoutParams(0,dp(52),1));
+            for(int i=1;i<recordings.size();i++){
+                AudioCatalog.Track alternate=recordings.get(i);
+                add(panel,button("Play "+alternate.title,()->{
+                    ArrayList<AudioCatalog.Track> one=new ArrayList<>();one.add(alternate);playAudio(one,0);
+                },false));
+            }
         }
         if(individual==null&&recordings.isEmpty())add(panel,text("No verified recording is mapped to this passage yet.",12,muted(),false));
         if(bookIndex==21||bookIndex==22)add(panel,text("This madal is one continuous passage. There are no published per-line audio boundaries.",12,muted(),false));
