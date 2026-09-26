@@ -226,9 +226,9 @@ public final class MainActivity extends Activity {
             if(Math.abs(delta)<dp(5))return;
             setDockNavShown(delta<0);
         });
-        String[] tabs={"Home","Recite","Learn","Explore","Search","Settings"};for(String tab:tabs){
+        String[] tabs={"Home","Recite","Learn","Search","Settings"};for(String tab:tabs){
             TextView link=text(tab,11,active.equals(tab)?ac():muted(),active.equals(tab));link.setGravity(Gravity.CENTER);link.setMinimumHeight(dp(elderMode?56:48));
-            bar.addView(link,new LinearLayout.LayoutParams(0,dp(elderMode?58:52),1));link.setOnClickListener(v->{switch(tab){case "Home":showHome();break;case "Search":showSearch();break;case "Recite":showBooks();break;case "Settings":showSettings();break;default:showNotice(tab);}});
+            bar.addView(link,new LinearLayout.LayoutParams(0,dp(elderMode?58:52),1));link.setOnClickListener(v->{switch(tab){case "Home":showHome();break;case "Search":showSearch();break;case "Recite":showBooks();break;case "Learn":showLearn();break;case "Settings":showSettings();break;default:showNotice(tab);}});
         }
     }
     private void setDockNavShown(boolean visible){
@@ -611,7 +611,7 @@ public final class MainActivity extends Activity {
         if(window!=null)window.setLayout(-1,Math.min(dp(530),(int)(getResources().getDisplayMetrics().heightPixels*.74f)));
         updateAudioControls();
     }
-    private void showCurrentPage(){switch(page){case "Reader":showReader(selected);break;case "Home":showHome();break;case "Books":showBooks();break;case "ContentSettings":showContentSettings();break;case "Settings":showSettings();break;default:break;}}
+    private void showCurrentPage(){switch(page){case "Reader":showReader(selected);break;case "Home":showHome();break;case "Books":showBooks();break;case "Learn":showLearn();break;case "ContentSettings":showContentSettings();break;case "Settings":showSettings();break;default:break;}}
     private void playAudio(ArrayList<AudioCatalog.Track> tracks,int start){
         if(tracks.isEmpty()){Toast.makeText(this,"No recording for this passage yet.",Toast.LENGTH_LONG).show();return;}
         audioController.play(tracks,start);showCurrentPage();
@@ -941,16 +941,77 @@ public final class MainActivity extends Activity {
         if(value==null)return;new AlertDialog.Builder(this).setMessage("An app update is required for new content. The verified APK installer will be offered after its source, signature and download are checked.")
             .setPositiveButton("OK",null).show();
     }
-    private void showSearch(){page="Search";start("Find a pasuram","Search all 4,000 · offline","Search");
-        EditText input=new EditText(this);input.setTextColor(fg());input.setHintTextColor(muted());input.setSingleLine(true);input.setTextSize(16);input.setHint("Tamil, transliteration, number");pad(input,18,8,18,8);add(body,input);
-        LinearLayout results=column();add(body,results);
+    private int dailyNumber(){
+        java.util.Calendar c=java.util.Calendar.getInstance();
+        java.time.LocalDate day=java.time.LocalDate.of(c.get(java.util.Calendar.YEAR),c.get(java.util.Calendar.MONTH)+1,c.get(java.util.Calendar.DAY_OF_MONTH));
+        long offset=java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.of(2026,1,1),day);
+        return (int)Math.floorMod(offset,4000)+1;
+    }
+    private static final class DailyVerse {
+        final int book,number;final String name,alvar,tamil,latin;
+        DailyVerse(int book,int number,String name,String alvar,String tamil,String latin){this.book=book;this.number=number;this.name=name;this.alvar=alvar;this.tamil=tamil;this.latin=latin;}
+    }
+    private DailyVerse dailyVerse(int number)throws Exception{
+        for(int i=0;i<books.length();i++){JSONObject meta=books.getJSONObject(i);
+            if(number<meta.getInt("start")||number>meta.getInt("end"))continue;
+            String fname=meta.getString("file");String newer=contentUpdates.readBook(fname);
+            JSONObject data=new JSONObject(newer==null?readAsset("books/"+fname):newer);
+            for(int j=0;j<data.getJSONArray("sections").length();j++){
+                JSONArray rows=data.getJSONArray("sections").getJSONObject(j).getJSONArray("p");
+                for(int k=0;k<rows.length();k++){JSONArray row=rows.getJSONArray(k);
+                    if(number>=row.getInt(0)&&number<=row.getInt(1))return new DailyVerse(i,number,meta.getString("name"),meta.getString("alvar"),join(row.getJSONArray(3)),join(row.getJSONArray(2)));
+                }
+            }
+        }throw new IllegalStateException("Daily pasuram unavailable: "+number);
+    }
+    private int learnMode=0,learnReveal=0;
+    private void showLearn(){page="Learn";start("Learn","Memorise today's pasuram","Learn");
+        try{int number=dailyNumber();DailyVerse verse=dailyVerse(number);
+            LinearLayout c=card(body);add(c,text("TODAY'S PASURAM",13,ac(),true));
+            add(c,text("Pasuram "+number+" · "+verse.name+" · "+verse.alvar,14,fg(),true));
+            add(c,text(verse.tamil.split("\n",2)[0],17,fg(),false));
+            add(c,text(verse.latin.split("\n",2)[0],12,muted(),false));
+            LinearLayout acts=new LinearLayout(this);add(c,acts);
+            AudioCatalog.Track track=audioCatalog==null?null:audioCatalog.verse(number);
+            if(track==null&&audioCatalog!=null){JSONObject meta=books.optJSONObject(verse.book);
+                ArrayList<AudioCatalog.Track> groups=audioCatalog.recordings(meta.optString("id"),audioCatalog.groupRange(meta.optString("id"),number,meta.optInt("end"))[0]);
+                if(!groups.isEmpty())track=groups.get(0);
+            }
+            final AudioCatalog.Track playable=track;
+            if(playable!=null)acts.addView(button("▶ Listen",()->{ArrayList<AudioCatalog.Track> one=new ArrayList<>();one.add(playable);playAudio(one,0);},false),new LinearLayout.LayoutParams(0,dp(48),1));
+            acts.addView(button("Open in reader",()->{loadBook(verse.book);selected=0;for(int i=0;i<verses.size();i++)if(verses.get(i).number==number){selected=i;break;}showReader(selected);},false),new LinearLayout.LayoutParams(0,dp(48),1));
+            add(c,text("Practise this pasuram",15,fg(),true));
+            LinearLayout modes=new LinearLayout(this);add(c,modes);
+            String[] labels={"First letters","Every other line","Line by line"};
+            for(int i=0;i<labels.length;i++){final int mode=i;
+                modes.addView(button(labels[i],()->{learnMode=mode;learnReveal=0;showLearn();},i==learnMode),new LinearLayout.LayoutParams(0,dp(48),1));}
+            String[] lines=verse.tamil.split("\n",-1);StringBuilder prompt=new StringBuilder();
+            for(int i=0;i<lines.length;i++){if(i>0)prompt.append('\n');String line=lines[i];
+                if(i<learnReveal){prompt.append(line);continue;}
+                if(learnMode==0){String[] words=line.split(" ");for(int w=0;w<words.length;w++){if(w>0)prompt.append(' ');String word=words[w];prompt.append(word.isEmpty()?word:word.substring(0,word.offsetByCodePoints(0,1))+"…");}}
+                else if(learnMode==1&&i%2==0)prompt.append(line);
+                else prompt.append("· · · · ·");
+            }
+            LinearLayout drill=card(body);add(drill,text(prompt.toString(),17,fg(),false));
+            if(learnMode==2&&learnReveal<lines.length)add(drill,button("Reveal next line",()->{learnReveal++;showLearn();},false));
+            add(drill,button(learnReveal==lines.length?"Practise again":"Show full pasuram",()->{learnReveal=learnReveal==lines.length?0:lines.length;showLearn();},false));
+            add(drill,text("Practise with today's verse; the next verse appears on the next calendar day.",11,muted(),false));
+        }catch(Exception error){android.util.Log.e("Learn","Today's pasuram unavailable",error);
+            add(card(body),text("Today's pasuram is unavailable on this device.",13,muted(),false));}
+    }
+    private int findMode=0;
+    private void showSearch(){searchGeneration++;if(currentSearch!=null)currentSearch.cancel(true);page="Search";start("Find a pasuram","Search all 4,000 · offline","Search");
+        LinearLayout modeCard=card(body);add(modeCard,text("SEARCH TEXT",13,ac(),true));
+        EditText input=new EditText(this);input.setTextColor(fg());input.setHintTextColor(muted());input.setSingleLine(true);input.setTextSize(16);input.setHint(findMode==2?"Type 1–4000":findMode==3?"Tamil or transliterated opening words":"Tamil, transliteration, phrase or number");
+        if(findMode==2)input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);pad(input,18,8,18,8);add(modeCard,input);
+        LinearLayout results=column();
         input.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int c,int f){}public void onTextChanged(CharSequence s,int a,int b,int c){
             final String query=s.toString(); final int generation=++searchGeneration;
             if(currentSearch!=null)currentSearch.cancel(true);
             results.removeAllViews();add(card(results),text("Searching the offline library…",13,muted(),false));
             mainHandler.postDelayed(()->{
                 if(generation!=searchGeneration)return;
-                if(query.trim().length()<2){renderSearchMatches(results,new ArrayList<>(),false,query,generation);return;}
+                if(query.trim().length()<(findMode==2?1:2)){renderSearchMatches(results,new ArrayList<>(),false,query,generation);return;}
                 currentSearch=searchWorker.submit(()->{
                     try{SearchResult result=findMatches(query);runOnUiThread(()->{
                         if(generation==searchGeneration&&page.equals("Search"))renderSearchMatches(results,result.matches,result.more,query,generation);
@@ -962,7 +1023,25 @@ public final class MainActivity extends Activity {
                 });
             },240);
         }public void afterTextChanged(Editable e){}});
-        add(body,text("Results appear as you type; no full 4,000-card list on screen.",12,muted(),false));
+        add(modeCard,text("FIND A PASURAM",13,ac(),true));
+        String[] modeNames={"Text","Alvar","Number","Opening words"};
+        for(int row=0;row<2;row++){LinearLayout modes=new LinearLayout(this);add(modeCard,modes);
+            for(int col=0;col<2;col++){int i=row*2+col;final int choice=i;
+                modes.addView(button(modeNames[i],()->{findMode=choice;showSearch();},findMode==i),new LinearLayout.LayoutParams(0,dp(48),1));}}
+        if(findMode==1){
+            java.util.LinkedHashSet<String> names=new java.util.LinkedHashSet<>();
+            for(int i=0;i<books.length();i++)names.add(books.optJSONObject(i).optString("alvar"));
+            LinearLayout picks=card(body);add(picks,text("Select an Alvar",13,ac(),true));
+            for(String name:names)add(picks,button(name,()->{
+                results.removeAllViews();int shown=0;
+                for(int i=0;i<books.length();i++){JSONObject meta=books.optJSONObject(i);if(!name.equals(meta.optString("alvar")))continue;
+                    final int bi=i;add(results,button(meta.optString("name")+" · "+meta.optInt("start")+"–"+meta.optInt("end"),()->{loadBook(bi);selected=0;showIndex();},false));shown++;}
+                if(shown==0)add(results,text("No prabandhams found.",13,muted(),false));
+            },false));
+        }
+        add(body,results);
+        add(card(results),text("Search the offline library, or choose an Alvar.",13,muted(),false));
+        add(body,text("Text searches all lines. Opening words searches verse openings. Numbers open exact pasurams.",11,muted(),false));
     }
     private static final class SearchEntry {
         final int book,number,last;final String opening,name,alvar,tamilLower,latinLower;
@@ -998,11 +1077,20 @@ public final class MainActivity extends Activity {
     private SearchResult findMatches(String query)throws Exception {
         long started=android.os.SystemClock.elapsedRealtime();
         String q=query.trim().toLowerCase(Locale.ROOT);boolean numeric=q.matches("[0-9]{1,4}");int queryNumber=numeric?Integer.parseInt(q):-1;
+        if(findMode==2&&(queryNumber<1||queryNumber>4000))return new SearchResult(new ArrayList<>(),false);
         ArrayList<Match> matches=new ArrayList<>();boolean more=false;
         for(SearchEntry entry:getSearchIndex()){
             if(Thread.currentThread().isInterrupted())return new SearchResult(matches,false);
+            if(findMode==2&&!numeric)continue;
             if(numeric){if(queryNumber<entry.number||queryNumber>entry.last)continue;}
-            else if(!entry.tamilLower.contains(q)&&!entry.latinLower.contains(q))continue;
+            else if(findMode==3){
+                String opening=entry.opening.toLowerCase(Locale.ROOT);
+                String latinOpening=entry.latinLower.split("\n",2)[0];
+                String plain=q.replaceAll("[\\p{Punct}\\s]+", "");
+                if(!opening.contains(q)&&!latinOpening.contains(q)
+                    &&!opening.replaceAll("[\\p{Punct}\\s]+", "").contains(plain)
+                    &&!latinOpening.replaceAll("[\\p{Punct}\\s]+", "").contains(plain))continue;
+            }else if(!entry.tamilLower.contains(q)&&!entry.latinLower.contains(q))continue;
             if(matches.size()>=20){more=true;break;}
             matches.add(new Match(entry.book,entry.number,entry.last,entry.opening,entry.name,entry.alvar));
         }
@@ -1010,7 +1098,7 @@ public final class MainActivity extends Activity {
     }
     private void renderSearchMatches(LinearLayout target,ArrayList<Match> matches,boolean more,String query,int generation){
         if(generation!=searchGeneration)return;target.removeAllViews();
-        if(query.trim().length()<2){add(card(target),text("Enter at least two letters, or a pasuram number.",13,muted(),false));return;}
+        if(query.trim().length()<(findMode==2?1:2)){add(card(target),text(findMode==2?"Enter a pasuram number from 1 to 4,000.":"Enter at least two letters, or choose an Alvar.",13,muted(),false));return;}
         for(Match match:matches){LinearLayout c=card(target);
             add(c,text(match.number+(match.last>match.number?"–"+match.last:"")+" · "+match.opening,16,fg(),false));
             add(c,text(match.name+" · "+match.alvar,11,muted(),false));c.setMinimumHeight(dp(72));
@@ -1077,6 +1165,7 @@ public final class MainActivity extends Activity {
             case "Books": return "All prabandhams";
             case "Recite": return bookName;
             case "Search": return "Search";
+            case "Learn": return "Learn";
             case "Saved": return "Saved pasurams";
             case "Journey": return "My journey";
             default: return "Home";
@@ -1089,6 +1178,7 @@ public final class MainActivity extends Activity {
                     case "Recite": showIndex();return;
                     case "Books": showBooks();return;
                     case "Search": showSearch();return;
+                    case "Learn": showLearn();return;
                     case "Saved": showSaved();return;
                     case "Journey": showJourney();return;
                     default: showHome();return;
