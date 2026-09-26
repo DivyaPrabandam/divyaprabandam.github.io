@@ -273,9 +273,9 @@ public final class MainActivity extends Activity {
     }
     private void appendIndexCards(){int limit=Math.min(loadedIndexCards+35,verses.size());
         for(int i=loadedIndexCards;i<limit;i++){final int index=i;Verse v=verses.get(i);LinearLayout c=card(body);
-            TextView line=text("Pasuram "+v.number+"  "+v.opening(),16,fg(),false);
+            TextView line=text(v.opening(),16,fg(),false);
             pad(line,0,1,0,5);add(c,line);
-            add(c,text(bookAlvar+" · "+bookName+" "+(i+1),11,muted(),false));
+            add(c,text(bookAlvar+" · "+bookName+" · "+v.number,11,muted(),false));
             c.setOnClickListener(w->showReader(index));c.setMinimumHeight(dp(72));
         }
         loadedIndexCards=limit;
