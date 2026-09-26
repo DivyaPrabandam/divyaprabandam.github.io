@@ -264,7 +264,6 @@ public final class MainActivity extends Activity {
                 String alvar=meta.optString("alvar","");
                 add(labels,text(alvar+" · "+first+"–"+last,12,muted(),false));
                 TextView badge=text(String.valueOf(count),12,0xffffffff,false);badge.setGravity(Gravity.CENTER);
-                badge.setBackground(shape(ac(),8));
                 LinearLayout.LayoutParams badgeParams=new LinearLayout.LayoutParams(dp(44),dp(28));badgeParams.leftMargin=dp(8);
                 content.addView(badge,badgeParams);
                 c.setMinimumHeight(dp(72));c.setOnClickListener(v->{try{loadBook(idx);selected=0;
