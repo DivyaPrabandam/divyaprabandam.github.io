@@ -288,7 +288,6 @@ public final class MainActivity extends Activity {
     private ScrollView currentScroll;
     private void showIndex(){if(!page.equals("Reader")&&!page.equals("Recite"))indexParent=page;
         page="Recite";start(bookName,bookAlvar+" · "+bookTamil+" · "+verses.size()+" passages","Recite");
-        add(card(body),button("All prabandhams",this::showBooks,false));
         loadedIndexCards=0;appendIndexCards();
     }
     private void appendIndexCards(){int limit=Math.min(loadedIndexCards+35,verses.size());
