@@ -322,6 +322,22 @@ public final class MainActivity extends Activity {
             GradientDrawable circle=shape(ac(),48);play.setBackground(circle);
             verseHeading.addView(play,new LinearLayout.LayoutParams(dp(46),dp(46)));
         }
+        if(getResources().getConfiguration().orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE){
+            TextView smaller=text("A−",15,ac(),true);smaller.setGravity(Gravity.CENTER);
+            smaller.setContentDescription("Decrease pasuram font size");
+            smaller.setBackground(shape(surface(),24));
+            LinearLayout.LayoutParams smallParams=new LinearLayout.LayoutParams(dp(44),dp(46));smallParams.leftMargin=dp(5);
+            verseHeading.addView(smaller,smallParams);
+            TextView bigger=text("A+",15,ac(),true);bigger.setGravity(Gravity.CENTER);
+            bigger.setContentDescription("Increase pasuram font size");
+            bigger.setBackground(shape(surface(),24));
+            LinearLayout.LayoutParams bigParams=new LinearLayout.LayoutParams(dp(44),dp(46));bigParams.leftMargin=dp(4);
+            verseHeading.addView(bigger,bigParams);
+            smaller.setOnClickListener(clicked->{textSize=Math.max(16,textSize-2);
+                preferences.edit().putInt("size",textSize).apply();showReader(selected);});
+            bigger.setOnClickListener(clicked->{textSize=Math.min(34,textSize+2);
+                preferences.edit().putInt("size",textSize).apply();showReader(selected);});
+        }
         TextView verse=text(transliteration?v.latin:v.tamil,textSize,fg(),false);verse.setTextSize(textSize+(elderMode?4:0));verse.setLineSpacing(dp(elderMode?12:7),elderMode?1.5f:1.28f);pad(verse,0,22,0,20);add(c,verse);
         if(bookIndex==21||bookIndex==22)add(c,text("This complete madal is one source passage covering a numbered range; individual verse boundaries are not marked in the site data.",11,muted(),false));
         if(!focusMode)
