@@ -1000,12 +1000,14 @@ public final class MainActivity extends Activity {
             add(card(body),text("Today's pasuram is unavailable on this device.",13,muted(),false));}
     }
     private int findMode=0;
+    private String selectedOpeningLetter="";
     private void showSearch(){searchGeneration++;if(currentSearch!=null)currentSearch.cancel(true);page="Search";start("Find a pasuram","Search all 4,000 · offline","Search");
         LinearLayout modeCard=card(body);add(modeCard,text("SEARCH TEXT",13,ac(),true));
         EditText input=new EditText(this);input.setTextColor(fg());input.setHintTextColor(muted());input.setSingleLine(true);input.setTextSize(16);input.setHint(findMode==2?"Type 1–4000":findMode==3?"Tamil or transliterated opening words":"Tamil, transliteration, phrase or number");
         if(findMode==2)input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);pad(input,18,8,18,8);add(modeCard,input);
         LinearLayout results=column();
         input.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int c,int f){}public void onTextChanged(CharSequence s,int a,int b,int c){
+            selectedOpeningLetter="";
             final String query=s.toString(); final int generation=++searchGeneration;
             if(currentSearch!=null)currentSearch.cancel(true);
             results.removeAllViews();add(card(results),text("Searching the offline library…",13,muted(),false));
@@ -1028,6 +1030,35 @@ public final class MainActivity extends Activity {
         for(int row=0;row<2;row++){LinearLayout modes=new LinearLayout(this);add(modeCard,modes);
             for(int col=0;col<2;col++){int i=row*2+col;final int choice=i;
                 modes.addView(button(modeNames[i],()->{findMode=choice;showSearch();},findMode==i),new LinearLayout.LayoutParams(0,dp(48),1));}}
+        if(findMode==3){
+            LinearLayout letters=card(body);add(letters,text("Or tap the first letter:",13,muted(),false));
+            String alphabet="அஆஇஈஉஊஎஏஐஒஓகசஞதநபமயலவ";
+            for(int row=0;row<(alphabet.length()+4)/5;row++){
+                LinearLayout strip=new LinearLayout(this);add(letters,strip);
+                for(int col=0;col<5;col++){
+                    int at=row*5+col;if(at>=alphabet.length())break;
+                    final String letter=alphabet.substring(at,at+1);
+                    strip.addView(button(letter,()->{
+                        // The site's first-letter choice clears typed search; tapping it again clears the choice.
+                        boolean clear=letter.equals(selectedOpeningLetter);
+                        input.setText("");selectedOpeningLetter=clear?"":letter;
+                        if(clear){results.removeAllViews();add(card(results),text("Choose a first letter or type opening words.",13,muted(),false));showSearch();return;}
+                        final int generation=++searchGeneration;
+                        if(currentSearch!=null)currentSearch.cancel(true);
+                        results.removeAllViews();add(card(results),text("Finding openings…",13,muted(),false));
+                        currentSearch=searchWorker.submit(()->{
+                            try{ArrayList<Match> found=findOpeningLetter(letter);runOnUiThread(()->{
+                                if(generation==searchGeneration&&page.equals("Search"))renderOpeningLetter(results,found,letter,generation);
+                            });}catch(Exception error){runOnUiThread(()->{
+                                if(generation==searchGeneration&&page.equals("Search")){
+                                    results.removeAllViews();add(card(results),text("Opening words are unavailable.",13,muted(),false));
+                                }
+                            });}
+                        });
+                    },letter.equals(selectedOpeningLetter)),new LinearLayout.LayoutParams(0,dp(48),1));
+                }
+            }
+        }
         if(findMode==1){
             java.util.LinkedHashSet<String> names=new java.util.LinkedHashSet<>();
             for(int i=0;i<books.length();i++)names.add(books.optJSONObject(i).optString("alvar"));
@@ -1096,9 +1127,24 @@ public final class MainActivity extends Activity {
         }
         lastSearchElapsedMs=android.os.SystemClock.elapsedRealtime()-started;android.util.Log.d("PrabandhamSearch","elapsedMs="+lastSearchElapsedMs+" queryLength="+q.length());return new SearchResult(matches,more);
     }
+    private ArrayList<Match> findOpeningLetter(String letter)throws Exception{
+        ArrayList<Match> matches=new ArrayList<>();
+        for(SearchEntry entry:getSearchIndex()){
+            if(Thread.currentThread().isInterrupted())return matches;
+            if(entry.opening.startsWith(letter))matches.add(new Match(entry.book,entry.number,entry.last,entry.opening,entry.name,entry.alvar));
+        }
+        java.text.Collator tamil=java.text.Collator.getInstance(new Locale("ta"));
+        matches.sort((a,b)->tamil.compare(a.opening,b.opening));return matches;
+    }
+    private void renderOpeningLetter(LinearLayout target,ArrayList<Match> matches,String letter,int generation){
+        if(generation!=searchGeneration)return;
+        renderSearchMatches(target,matches,false,"letter:"+letter,generation);
+        TextView count=text(matches.size()+(matches.size()==1?" opening":" openings")+" beginning with "+letter,13,muted(),false);
+        target.addView(count,0);
+    }
     private void renderSearchMatches(LinearLayout target,ArrayList<Match> matches,boolean more,String query,int generation){
         if(generation!=searchGeneration)return;target.removeAllViews();
-        if(query.trim().length()<(findMode==2?1:2)){add(card(target),text(findMode==2?"Enter a pasuram number from 1 to 4,000.":"Enter at least two letters, or choose an Alvar.",13,muted(),false));return;}
+        if(!query.startsWith("letter:")&&query.trim().length()<(findMode==2?1:2)){add(card(target),text(findMode==2?"Enter a pasuram number from 1 to 4,000.":"Enter at least two letters, or choose an Alvar.",13,muted(),false));return;}
         for(Match match:matches){LinearLayout c=card(target);
             add(c,text(match.number+(match.last>match.number?"–"+match.last:"")+" · "+match.opening,16,fg(),false));
             add(c,text(match.name+" · "+match.alvar,11,muted(),false));c.setMinimumHeight(dp(72));
