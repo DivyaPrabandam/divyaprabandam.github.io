@@ -9,7 +9,6 @@ import android.graphics.BitmapFactory;
 import android.util.Base64;
 import android.widget.Spinner;
 import android.widget.SeekBar;
-import android.animation.ValueAnimator;
 import android.app.Dialog;
 import android.view.WindowManager;
 import android.os.Handler;
@@ -71,8 +70,6 @@ public final class MainActivity extends Activity {
     private SeekBar miniAudioSeek;
     private boolean miniAudioSeekDragging=false;
     private Dialog audioSheet;
-    private boolean dockNavShown=true;
-    private int navExpandedHeight=0;
     private Button audioToggle,audioLoop,audioGroupLoop,audioAB,miniAudioToggle;
     private SeekBar audioSeek;
     private boolean audioSeekDragging;
@@ -221,29 +218,14 @@ public final class MainActivity extends Activity {
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         if(audioController!=null&&audioController.track()!=null&&!landscapePlayer)showMiniAudio();
         bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER);bar.setBackgroundColor(bg());pad(bar,7,8,7,8);
-        navExpandedHeight=dp(elderMode?74:68);
-        if(!page.equals("Reader"))dockNavShown=true;
-        else dockNavShown=true;
-        root.addView(bar,new LinearLayout.LayoutParams(-1,dockNavShown?navExpandedHeight:0));
-        scroll.setOnScrollChangeListener((View v,int x,int y,int oldX,int oldY)->{
-            if(audioController==null||audioController.track()==null)return;
-            int delta=y-oldY;
-            if(Math.abs(delta)<dp(5))return;
-            setDockNavShown(delta<0);
-        });
+        // Keep the navigation dock fixed while text scrolls. Resizing it during
+        // a fling relayouts the ScrollView, changing the scroll offset and
+        // reversing the direction signal, which makes the text jerk back and forth.
+        root.addView(bar,new LinearLayout.LayoutParams(-1,dp(elderMode?74:68)));
         String[] tabs={"Home","Recite","Learn","Search","Settings"};for(String tab:tabs){
             TextView link=text(tab,11,active.equals(tab)?ac():muted(),active.equals(tab));link.setGravity(Gravity.CENTER);link.setMinimumHeight(dp(elderMode?56:48));
             bar.addView(link,new LinearLayout.LayoutParams(0,dp(elderMode?58:52),1));link.setOnClickListener(v->{switch(tab){case "Home":showHome();break;case "Search":showSearch();break;case "Recite":showBooks();break;case "Learn":showLearn();break;case "Settings":showSettings();break;default:showNotice(tab);}});
         }
-    }
-    private void setDockNavShown(boolean visible){
-        if(bar==null||dockNavShown==visible)return;
-        dockNavShown=visible;
-        int from=bar.getLayoutParams().height,to=visible?navExpandedHeight:0;
-        ValueAnimator animator=ValueAnimator.ofInt(from,to);animator.setDuration(180);
-        animator.addUpdateListener(a->{if(bar==null)return;android.view.ViewGroup.LayoutParams params=bar.getLayoutParams();
-            params.height=(int)a.getAnimatedValue();bar.setLayoutParams(params);});
-        animator.start();
     }
     private void showHome(){page="Home";start("Divya Prabandham","Available offline · 25 prabandhams","Home");
         TextView invocation=text("ஸ்ரீ:",24,ac(),true);invocation.setGravity(Gravity.CENTER);pad(invocation,0,20,0,10);add(body,invocation);
