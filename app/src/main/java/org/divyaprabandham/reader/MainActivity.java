@@ -204,8 +204,8 @@ public final class MainActivity extends Activity {
         }
         ScrollView scroll=new ScrollView(this);currentScroll=scroll;scroll.setFillViewport(true);
         scroll.setVerticalScrollBarEnabled(false);body=column();scroll.addView(body);
-        // The reader header belongs to scroll content, never a fixed pane above the verse.
-        LinearLayout headingHost=page.equals("Reader")?body:root;
+        // All screen headings belong to scroll content, so they move away with the page.
+        LinearLayout headingHost=body;
         if(!page.equals("Home")){
             TextView up=text("‹  "+upLabel(),16,ac(),true);pad(up,20,12,20,8);
             up.setGravity(Gravity.CENTER_VERTICAL);up.setMinimumHeight(dp(48));
