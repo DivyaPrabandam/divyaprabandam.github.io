@@ -823,43 +823,47 @@ public final class MainActivity extends Activity {
     private void showSettings(){
         page="Settings";start("Settings","Reading, opening, audio and updates","Settings");
         LinearLayout library=card(body);add(library,text("YOUR LIBRARY",13,ac(),true));
-        add(library,button("My 4,000 journey · "+readCount()+" marked",this::showJourney,false));
-        add(library,button("☆ Saved pasurams",this::showSaved,false));
-        add(library,button("Reports",this::showCorrectionReports,false));
-        add(library,button(correctionMode?"Exit correction mode":"Correction mode",()->{
+        LinearLayout libraryTop=new LinearLayout(this);add(library,libraryTop);
+        libraryTop.addView(button("My 4,000 journey · "+readCount()+" marked",this::showJourney,false),new LinearLayout.LayoutParams(0,dp(58),1));
+        libraryTop.addView(button("☆ Saved pasurams",this::showSaved,false),new LinearLayout.LayoutParams(0,dp(58),1));
+        LinearLayout libraryBottom=new LinearLayout(this);add(library,libraryBottom);
+        libraryBottom.addView(button("Reports",this::showCorrectionReports,false),new LinearLayout.LayoutParams(0,dp(58),1));
+        libraryBottom.addView(button(correctionMode?"Exit correction mode":"Correction mode",()->{
             if(correctionMode)exitCorrectionMode();else enterCorrectionMode();
-        },correctionMode));
+        },correctionMode),new LinearLayout.LayoutParams(0,dp(58),1));
         LinearLayout update=card(body);add(update,text("CONTENT STATUS",13,ac(),true));
         if(ContentUpdates.configured()){
             try{int version=contentUpdates.activeVersion();
                 add(update,text(version>0?"Reading text · verified update "+version:"Reading text · offline edition",13,fg(),true));
+                if(version>0)add(update,text("This number changes only when a newer signed text edition is published.",11,muted(),false));
             }catch(Exception ex){android.util.Log.w("ContentUpdates","Status unavailable",ex);}
             String gate=getSharedPreferences("content-settings",MODE_PRIVATE).getString("update-required",null);
             if(gate!=null){add(update,text("App update required for new content. Saved reading text remains available.",13,fg(),false));
                 add(update,button("Update app",this::showAppUpdate,false));}
         }
-        add(update,button("Content settings",this::showContentSettings,false));
         LinearLayout opening=card(body);add(opening,text("OPENING",13,ac(),true));
         android.content.SharedPreferences intro=getSharedPreferences("intro",MODE_PRIVATE);
         boolean skip=intro.getBoolean("skip-future",false),muted=intro.getBoolean("music-off",false);
-        add(opening,button(skip?"Opening animation: Off":"Opening animation: On",()->{
+        LinearLayout openingOptions=new LinearLayout(this);add(opening,openingOptions);
+        openingOptions.addView(button(skip?"Animation: Off":"Animation: On",()->{
             intro.edit().putBoolean("skip-future",!skip).apply();showSettings();
-        },false));
-        add(opening,button(muted?"Opening music: Off":"Opening music: On",()->{
+        },!skip),new LinearLayout.LayoutParams(0,dp(58),1));
+        openingOptions.addView(button(muted?"Music: Off":"Music: On",()->{
             intro.edit().putBoolean("music-off",!muted).apply();showSettings();
-        },false));
+        },!muted),new LinearLayout.LayoutParams(0,dp(58),1));
         add(opening,text("Music controls only the opening song. The animation still plays silently.",11,muted(),false));
         LinearLayout audio=card(body);add(audio,text("PLAYER",13,ac(),true));
         if(audioController!=null){
-            add(audio,button("Playback speed: "+String.format(java.util.Locale.ROOT,"%.2f×",audioController.speed()),()->{
+            LinearLayout playerOptions=new LinearLayout(this);add(audio,playerOptions);
+            playerOptions.addView(button("Speed: "+String.format(java.util.Locale.ROOT,"%.2f×",audioController.speed()),()->{
                 SpeedDial dial=new SpeedDial(this,audioController.speed(),audioController::speed,surface(),fg(),ac(),muted());
                 new AlertDialog.Builder(this).setTitle("Playback speed").setView(dial)
                     .setPositiveButton("Done",(d,w)->showSettings()).show();
-            },false));
-            add(audio,button("Open player controls",()->{
+            },false),new LinearLayout.LayoutParams(0,dp(58),1));
+            playerOptions.addView(button("Player controls",()->{
                 if(audioController.track()!=null)showPlayerSheet();
                 else Toast.makeText(this,"Play a pasuram first to open controls",Toast.LENGTH_SHORT).show();
-            },false));
+            },false),new LinearLayout.LayoutParams(0,dp(58),1));
         }
         add(audio,text("Offline audio is saved per recording from the player. Repeat and A–B controls are in the player sheet.",11,muted(),false));
         LinearLayout rotation=card(body);add(rotation,text("ROTATION",13,ac(),true));
@@ -886,8 +890,8 @@ public final class MainActivity extends Activity {
             theme=t;preferences.edit().putInt("theme",theme).apply();showSettings();
         },i==theme);pick.setTextSize(10);themes.addView(pick,new LinearLayout.LayoutParams(0,dp(48),1));}
         LinearLayout content=card(body);add(content,text("CONTENT",13,ac(),true));
-        add(content,button("Content updates and image network settings",this::showContentSettings,false));
-        add(content,text("These settings also remain where you normally use them.",11,muted(),false));
+        add(content,button("Check text updates and image network settings",this::showContentSettings,false));
+        add(content,text("Text updates are verified before use. Image choices matter after images are published.",11,muted(),false));
     }
         private void showContentSettings(){page="ContentSettings";start("Content settings","Automatic updates · every 8 hours","Home");
         add(card(body),text("Reading text checks automatically every 8 hours when the phone has data. You can also check now. The saved edition remains available offline.",14,fg(),false));
