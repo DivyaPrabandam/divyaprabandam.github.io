@@ -158,6 +158,11 @@ public final class MainActivity extends Activity {
     }catch(Exception e){throw new IllegalStateException("Bundled text missing or unreadable",e);}}
     private static String join(JSONArray lines)throws Exception{StringBuilder b=new StringBuilder();for(int i=0;i<lines.length();i++){if(i>0)b.append('\n');b.append(lines.getString(i));}return b.toString();}
     private int bg(){return PALETTE[theme][0];} private int fg(){return PALETTE[theme][1];} private int ac(){return PALETTE[theme][2];} private int surface(){return PALETTE[theme][3];} private int muted(){return PALETTE[theme][4];}
+    private void themeSeekBar(SeekBar seek){
+        android.content.res.ColorStateList accent=android.content.res.ColorStateList.valueOf(ac());
+        seek.setProgressTintList(accent);seek.setThumbTintList(accent);
+        seek.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(muted()));
+    }
     private int dp(int n){return (int)(getResources().getDisplayMetrics().density*n+.5f);}
     private GradientDrawable shape(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
     private TextView text(String str,int sp,int color,boolean bold){TextView t=new TextView(this);t.setText(str);t.setTextSize(elderMode?Math.max(sp,Math.min(sp+3,25)):sp);t.setTextColor(color);t.setLineSpacing(dp(3),1.12f);if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);return t;}
@@ -263,7 +268,7 @@ public final class MainActivity extends Activity {
                 add(labels,text(name,19,fg(),true));
                 String alvar=meta.optString("alvar","");
                 add(labels,text(alvar+" · "+first+"–"+last,12,muted(),false));
-                TextView badge=text(String.valueOf(count),12,0xffffffff,false);badge.setGravity(Gravity.CENTER);
+                TextView badge=text(String.valueOf(count),12,muted(),false);badge.setGravity(Gravity.CENTER);
                 LinearLayout.LayoutParams badgeParams=new LinearLayout.LayoutParams(dp(44),dp(28));badgeParams.leftMargin=dp(8);
                 content.addView(badge,badgeParams);
                 c.setMinimumHeight(dp(72));c.setOnClickListener(v->{try{loadBook(idx);selected=0;
@@ -325,11 +330,11 @@ public final class MainActivity extends Activity {
         View track=new View(this);track.setBackground(shape(muted(),3));track.setAlpha(.32f);
         FrameLayout.LayoutParams trackParams=new FrameLayout.LayoutParams(dp(3),-1,Gravity.RIGHT);
         trackParams.setMargins(0,dp(12),dp(7),dp(12));rail.addView(track,trackParams);
-        TextView thumb=text("●",14,0xffffffff,true);thumb.setGravity(Gravity.CENTER);
+        TextView thumb=text("●",14,bg(),true);thumb.setGravity(Gravity.CENTER);
         thumb.setBackground(shape(ac(),14));
         FrameLayout.LayoutParams thumbParams=new FrameLayout.LayoutParams(dp(34),dp(38),Gravity.RIGHT|Gravity.TOP);
         thumbParams.rightMargin=dp(1);rail.addView(thumb,thumbParams);
-        TextView bubble=text(String.valueOf(verses.get(0).number),13,0xffffffff,true);
+        TextView bubble=text(String.valueOf(verses.get(0).number),13,bg(),true);
         bubble.setGravity(Gravity.CENTER);bubble.setBackground(shape(ac(),11));bubble.setVisibility(View.GONE);
         FrameLayout.LayoutParams bubbleParams=new FrameLayout.LayoutParams(dp(56),dp(32),Gravity.RIGHT|Gravity.TOP);
         bubbleParams.rightMargin=dp(47);frame.addView(bubble,bubbleParams);
@@ -446,7 +451,7 @@ public final class MainActivity extends Activity {
         Spinner pick=new Spinner(this);ArrayAdapter<String> adapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,names);
         pick.setAdapter(adapter);pick.setSelection(bookIndex);add(fields,pick);
         add(fields,text("Pasuram in this prabandham (1–end)",13,fg(),true));
-        EditText number=new EditText(this);number.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        EditText number=new EditText(this);number.setTextColor(fg());number.setHintTextColor(muted());number.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
         number.setSingleLine(true);number.setText(String.valueOf(selected+1));number.setSelectAllOnFocus(true);
         add(fields,number);
         pick.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
@@ -555,7 +560,7 @@ public final class MainActivity extends Activity {
         miniAudioToggle=button("▶",audioController::toggle,true);
         miniAudioToggle.setContentDescription("Play or pause audio");
         row.addView(miniAudioToggle,new LinearLayout.LayoutParams(dp(46),dp(46)));
-        miniAudioSeek=new SeekBar(this);miniAudioSeek.setMax(1000);miniAudioSeek.setPadding(dp(8),0,dp(8),0);
+        miniAudioSeek=new SeekBar(this);miniAudioSeek.setMax(1000);themeSeekBar(miniAudioSeek);miniAudioSeek.setPadding(dp(8),0,dp(8),0);
         dock.addView(miniAudioSeek,new LinearLayout.LayoutParams(-1,dp(36)));
         miniAudioSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
             public void onStartTrackingTouch(SeekBar seek){miniAudioSeekDragging=true;}
@@ -573,7 +578,7 @@ public final class MainActivity extends Activity {
         audioTitle=text("",18,fg(),true);pad(audioTitle,0,8,0,3);add(panel,audioTitle);
         audioStatus=text("",12,muted(),false);add(panel,audioStatus);
         audioTime=text("",12,fg(),false);pad(audioTime,0,8,0,0);add(panel,audioTime);
-        audioSeek=new SeekBar(this);audioSeek.setMax(1000);add(panel,audioSeek);
+        audioSeek=new SeekBar(this);audioSeek.setMax(1000);themeSeekBar(audioSeek);add(panel,audioSeek);
         audioSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
             public void onStartTrackingTouch(SeekBar seek){audioSeekDragging=true;}
             public void onStopTrackingTouch(SeekBar seek){audioSeekDragging=false;audioController.seek(audioController.duration()*seek.getProgress()/1000L);}
@@ -595,7 +600,7 @@ public final class MainActivity extends Activity {
         for(float rate:new float[]{.5f,.75f,1f,1.25f,1.5f}){
             Button chip=button(String.format(java.util.Locale.ROOT,"%.2f×",rate),()->audioController.speed(rate),false);
             rates.addView(chip,new LinearLayout.LayoutParams(0,dp(48),1));
-            chip.setOnLongClickListener(view->{audioController.speed(rate);SpeedDial dial=new SpeedDial(this,rate,audioController::speed);
+            chip.setOnLongClickListener(view->{audioController.speed(rate);SpeedDial dial=new SpeedDial(this,rate,audioController::speed,surface(),fg(),ac(),muted());
                 new AlertDialog.Builder(this).setTitle("Precise speed").setView(dial).setPositiveButton("Done",null).show();return true;});
         }
         if(audioController.queueSize()>1)add(panel,text("Repeat group loops the sequence. Save offline stores the current recording only.",11,muted(),false));
@@ -847,7 +852,7 @@ public final class MainActivity extends Activity {
         LinearLayout audio=card(body);add(audio,text("PLAYER",13,ac(),true));
         if(audioController!=null){
             add(audio,button("Playback speed: "+String.format(java.util.Locale.ROOT,"%.2f×",audioController.speed()),()->{
-                SpeedDial dial=new SpeedDial(this,audioController.speed(),audioController::speed);
+                SpeedDial dial=new SpeedDial(this,audioController.speed(),audioController::speed,surface(),fg(),ac(),muted());
                 new AlertDialog.Builder(this).setTitle("Playback speed").setView(dial)
                     .setPositiveButton("Done",(d,w)->showSettings()).show();
             },false));
