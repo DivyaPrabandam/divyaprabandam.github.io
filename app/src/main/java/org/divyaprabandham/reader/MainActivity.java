@@ -975,13 +975,20 @@ public final class MainActivity extends Activity {
             }
         }throw new IllegalStateException("Daily pasuram unavailable: "+number);
     }
-    private int learnMode=0,learnReveal=0;
-    private void showLearn(){page="Learn";start("Learn","Memorise today's pasuram","Learn");
-        try{int number=dailyNumber();DailyVerse verse=dailyVerse(number);
-            LinearLayout c=card(body);add(c,text("TODAY'S PASURAM",13,ac(),true));
+    private int learnMode=0,learnReveal=0,learnRandomNumber=0;
+    private void nextRandomLearnVerse(){
+        int current=learnRandomNumber>0?learnRandomNumber:dailyNumber();
+        // One of the other 3,999 numbered units: never repeat the verse on screen.
+        learnRandomNumber=1+Math.floorMod(current-1+1+java.util.concurrent.ThreadLocalRandom.current().nextInt(3999),4000);
+        learnReveal=0;showLearn();
+    }
+    private void showLearn(){page="Learn";start("Learn","Memorise a pasuram","Learn");
+        try{int number=learnRandomNumber>0?learnRandomNumber:dailyNumber();DailyVerse verse=dailyVerse(number);
+            LinearLayout c=card(body);add(c,text(learnRandomNumber>0?"RANDOM PASURAM":"TODAY'S PASURAM",13,ac(),true));
             add(c,text("Pasuram "+number+" · "+verse.name+" · "+verse.alvar,14,fg(),true));
-            add(c,text(verse.tamil.split("\n",2)[0],17,fg(),false));
-            add(c,text(verse.latin.split("\n",2)[0],12,muted(),false));
+            TextView openingLine=text(verse.tamil.split("\n",2)[0],Math.max(19,textSize),fg(),false);
+            pad(openingLine,0,7,0,5);add(c,openingLine);
+            add(c,text(verse.latin.split("\n",2)[0],13,muted(),false));
             LinearLayout acts=new LinearLayout(this);add(c,acts);
             AudioCatalog.Track track=audioCatalog==null?null:audioCatalog.verse(number);
             if(track==null&&audioCatalog!=null){JSONObject meta=books.optJSONObject(verse.book);
@@ -1003,10 +1010,19 @@ public final class MainActivity extends Activity {
                 else if(learnMode==1&&i%2==0)prompt.append(line);
                 else prompt.append("· · · · ·");
             }
-            LinearLayout drill=card(body);add(drill,text(prompt.toString(),17,fg(),false));
+            LinearLayout drill=card(body);add(drill,text(prompt.toString(),Math.max(19,textSize),fg(),false));
             if(learnMode==2&&learnReveal<lines.length)add(drill,button("Reveal next line",()->{learnReveal++;showLearn();},false));
             add(drill,button(learnReveal==lines.length?"Practise again":"Show full pasuram",()->{learnReveal=learnReveal==lines.length?0:lines.length;showLearn();},false));
-            add(drill,text("Practise with today's verse; the next verse appears on the next calendar day.",11,muted(),false));
+            add(drill,text(learnRandomNumber>0?"Practise this random verse, or pick another below.":"Today's verse changes on the next calendar day.",11,muted(),false));
+            LinearLayout randomRow=new LinearLayout(this);randomRow.setGravity(Gravity.RIGHT);add(body,randomRow);
+            if(learnRandomNumber>0){Button today=button("Today's pasuram",()->{learnRandomNumber=0;learnReveal=0;showLearn();},false);
+                randomRow.addView(today,new LinearLayout.LayoutParams(0,dp(52),1));}
+            Button another=button("Another random pasuram ↻",this::nextRandomLearnVerse,false);
+            LinearLayout.LayoutParams randomParams=new LinearLayout.LayoutParams(0,dp(52),learnRandomNumber>0?1:2);
+            randomParams.setMargins(dp(8),dp(10),dp(16),dp(8));randomRow.addView(another,randomParams);
+            // A short daily verse otherwise offers only ~60dp of scroll range above the dock.
+            // Let the entire back/title area leave the screen while the player and nav stay fixed.
+            View scrollTail=new View(this);body.addView(scrollTail,new LinearLayout.LayoutParams(-1,dp(205)));
         }catch(Exception error){android.util.Log.e("Learn","Today's pasuram unavailable",error);
             add(card(body),text("Today's pasuram is unavailable on this device.",13,muted(),false));}
     }
