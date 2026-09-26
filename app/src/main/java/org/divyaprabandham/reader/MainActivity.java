@@ -1014,12 +1014,20 @@ public final class MainActivity extends Activity {
             if(learnMode==2&&learnReveal<lines.length)add(drill,button("Reveal next line",()->{learnReveal++;showLearn();},false));
             add(drill,button(learnReveal==lines.length?"Practise again":"Show full pasuram",()->{learnReveal=learnReveal==lines.length?0:lines.length;showLearn();},false));
             add(drill,text(learnRandomNumber>0?"Practise this random verse, or pick another below.":"Today's verse changes on the next calendar day.",11,muted(),false));
-            LinearLayout randomRow=new LinearLayout(this);randomRow.setGravity(Gravity.RIGHT);add(body,randomRow);
+            // Even columns and shared insets keep both actions aligned at every screen width.
+            LinearLayout randomRow=new LinearLayout(this);
+            randomRow.setPadding(dp(16),dp(10),dp(16),dp(8));add(body,randomRow);
+            int actionHeight=dp(elderMode?76:64);
             if(learnRandomNumber>0){Button today=button("Today's pasuram",()->{learnRandomNumber=0;learnReveal=0;showLearn();},false);
-                randomRow.addView(today,new LinearLayout.LayoutParams(0,dp(52),1));}
-            Button another=button("Another random pasuram ↻",this::nextRandomLearnVerse,false);
-            LinearLayout.LayoutParams randomParams=new LinearLayout.LayoutParams(0,dp(52),learnRandomNumber>0?1:2);
-            randomParams.setMargins(dp(8),dp(10),dp(16),dp(8));randomRow.addView(another,randomParams);
+                today.setMinimumWidth(0);today.setPadding(dp(6),0,dp(6),0);
+                today.setMaxLines(2);today.setGravity(Gravity.CENTER);
+                randomRow.addView(today,new LinearLayout.LayoutParams(0,actionHeight,1));}
+            Button another=button("Another random pasuram",this::nextRandomLearnVerse,false);
+            another.setMinimumWidth(0);another.setPadding(dp(6),0,dp(6),0);
+            another.setMaxLines(2);another.setGravity(Gravity.CENTER);
+            LinearLayout.LayoutParams randomParams=new LinearLayout.LayoutParams(0,actionHeight,1);
+            if(learnRandomNumber>0)randomParams.setMarginStart(dp(10));
+            randomRow.addView(another,randomParams);
             // A short daily verse otherwise offers only ~60dp of scroll range above the dock.
             // Let the entire back/title area leave the screen while the player and nav stay fixed.
             View scrollTail=new View(this);body.addView(scrollTail,new LinearLayout.LayoutParams(-1,dp(205)));
