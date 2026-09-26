@@ -253,14 +253,19 @@ public final class MainActivity extends Activity {
         LinearLayout b=card(body);add(b,text(bookName,21,fg(),true));add(b,text(bookTamil+" · "+bookAlvar+" · "+verses.size()+" passages",13,muted(),false));
         add(b,button("Continue in "+bookName,this::showIndex,false));
         add(card(body),button("Browse all 25 prabandhams",this::showBooks,true));
-        LinearLayout journey=card(body);add(journey,text("MY 4,000 JOURNEY",11,ac(),true));
-        int read=readCount();add(journey,text(read+" of 4,000 marked read",17,fg(),true));
-        add(journey,text("Your progress stays on this phone. Listening alone never marks a passage read.",12,muted(),false));
-        add(journey,button("Open my journey",this::showJourney,false));
-        add(card(body),button("Saved pasurams",this::showSaved,false));
-        add(card(body),button("Correction reports",this::showCorrectionReports,false));
-        add(card(body),button(correctionMode?"Exit correction mode":"Enter correction mode",()->{
-            if(correctionMode)exitCorrectionMode();else enterCorrectionMode();},correctionMode));
+        LinearLayout quick=card(body);add(quick,text("YOUR LIBRARY",11,ac(),true));
+        LinearLayout first=new LinearLayout(this);add(quick,first);
+        Button journey=button("Journey\n"+readCount()+" marked",this::showJourney,false);
+        first.addView(journey,new LinearLayout.LayoutParams(0,dp(58),1));
+        Button saved=button("☆ Saved",this::showSaved,false);
+        first.addView(saved,new LinearLayout.LayoutParams(0,dp(58),1));
+        LinearLayout second=new LinearLayout(this);add(quick,second);
+        Button reports=button("Reports",this::showCorrectionReports,false);
+        second.addView(reports,new LinearLayout.LayoutParams(0,dp(58),1));
+        Button corrections=button(correctionMode?"Exit correction":"Correction mode",()->{
+            if(correctionMode)exitCorrectionMode();else enterCorrectionMode();
+        },correctionMode);
+        second.addView(corrections,new LinearLayout.LayoutParams(0,dp(58),1));
         LinearLayout themes=card(body);add(themes,text("Appearance · same navigation in every theme",14,fg(),true));
         LinearLayout choices=new LinearLayout(this);pad(choices,0,10,0,0);add(themes,choices);
         for(int i=0;i<NAMES.length;i++){final int t=i;Button pick=button(NAMES[i],()->{theme=t;preferences.edit().putInt("theme",theme).apply();showHome();},i==theme);
