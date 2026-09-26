@@ -15,6 +15,9 @@ import android.view.WindowManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
+import android.widget.ListView;
+import android.widget.SectionIndexer;
 import android.widget.Toast;
 import java.io.IOException;
 import android.os.Bundle;
@@ -265,22 +268,42 @@ public final class MainActivity extends Activity {
     private int madalLast(){return bookIndex==21?2712:2790;}
     private int madalNumberedCount(){return madalLast()-madalFirst()+1;}
     private String passageCountLabel(){return madalBook()?madalNumberedCount()+" numbered pasurams":verses.size()+" passages";}
-    private int loadedIndexCards=0; private int searchGeneration=0;
+    private int searchGeneration=0;
     private ScrollView currentScroll;
+    private final class PasuramIndexAdapter extends BaseAdapter implements SectionIndexer {
+        private final Object[] sections;
+        PasuramIndexAdapter(){int count=Math.min(20,Math.max(1,verses.size()/10));sections=new Object[count];
+            for(int i=0;i<count;i++)sections[i]=String.valueOf(verses.get(i*(verses.size()-1)/count).number);}
+        @Override public int getCount(){return verses.size();}
+        @Override public Object getItem(int position){return verses.get(position);}
+        @Override public long getItemId(int position){return verses.get(position).number;}
+        @Override public boolean hasStableIds(){return true;}
+        @Override public Object[] getSections(){return sections;}
+        @Override public int getPositionForSection(int section){return Math.min(verses.size()-1,section*verses.size()/sections.length);}
+        @Override public int getSectionForPosition(int position){return Math.min(sections.length-1,position*sections.length/verses.size());}
+        @Override public View getView(int position,View convert,android.view.ViewGroup parent){
+            Verse v=verses.get(position);LinearLayout row=column();row.setBackground(shape(surface(),theme==1?8:18));
+            pad(row,16,12,16,12);
+            add(row,text(v.opening(),16,fg(),false));
+            add(row,text(bookAlvar+" · "+bookName+" · "+v.number,11,muted(),false));
+            LinearLayout wrapper=column();pad(wrapper,16,5,25,5);add(wrapper,row);
+            return wrapper;
+        }
+    }
     private void showIndex(){if(!page.equals("Reader")&&!page.equals("Recite"))indexParent=page;
         page="Recite";start(bookName,bookAlvar+" · "+bookTamil+" · "+passageCountLabel(),"Recite");
-        loadedIndexCards=0;appendIndexCards();
-    }
-    private void appendIndexCards(){int limit=Math.min(loadedIndexCards+35,verses.size());
-        for(int i=loadedIndexCards;i<limit;i++){final int index=i;Verse v=verses.get(i);LinearLayout c=card(body);
-            TextView line=text(v.opening(),16,fg(),false);
-            pad(line,0,1,0,5);add(c,line);
-            add(c,text(bookAlvar+" · "+bookName+" · "+v.number,11,muted(),false));
-            c.setOnClickListener(w->showReader(index));c.setMinimumHeight(dp(72));
-        }
-        loadedIndexCards=limit;
-        if(limit<verses.size())add(card(body),button("Show next "+Math.min(35,verses.size()-limit)+" of "+verses.size(),()->{
-            if(body.getChildCount()>0)body.removeViewAt(body.getChildCount()-1);int y=currentScroll.getScrollY();appendIndexCards();currentScroll.post(()->currentScroll.scrollTo(0,y));},false));
+        // ListView virtualizes thousands of rows and its right-edge thumb can jump anywhere
+        // without loading prior pages or a repeated "Show next" action.
+        root.removeView(currentScroll);
+        ListView list=new ListView(this);list.setAdapter(new PasuramIndexAdapter());
+        list.setDivider(null);list.setCacheColorHint(bg());list.setBackgroundColor(bg());
+        list.setOnItemClickListener((parent,view,position,id)->showReader(position));
+        list.setVerticalScrollBarEnabled(true);list.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
+        if(verses.size()>10){list.setFastScrollEnabled(true);list.setFastScrollAlwaysVisible(true);}
+        // Restore the current verse as an orienting starting point when opening a book.
+        list.setSelection(Math.max(0,Math.min(selected,verses.size()-1)));
+        int navIndex=root.indexOfChild(bar);
+        root.addView(list,navIndex,new LinearLayout.LayoutParams(-1,0,1));
     }
     private void showReader(int index){if(!page.equals("Reader"))readerParent=page;
         selected=Math.max(0,Math.min(verses.size()-1,index));preferences.edit().putInt("selected",selected).apply();page="Reader";
