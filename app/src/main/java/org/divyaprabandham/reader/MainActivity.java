@@ -26,6 +26,8 @@ import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
+import android.view.MotionEvent;
+import android.widget.FrameLayout;
 import android.view.View;
 import android.view.Window;
 import android.widget.Button;
@@ -249,19 +251,30 @@ public final class MainActivity extends Activity {
         add(card(body),button("Browse all 25 prabandhams",this::showBooks,true));
     }
     private void showBooks(){page="Books";start("The 4,000 pasurams","25 prabandhams · offline","Recite");
-        int shown=0;
+        int shown=0,numberedTotal=0;
         for(int i=0;i<books.length();i++){final int idx=i;
             try{JSONObject meta=books.getJSONObject(i);String name=meta.optString("name","").trim();
                 if(name.isEmpty())name=meta.optString("id","Book "+(i+1));
-                LinearLayout c=card(body);add(c,text(name,19,fg(),true));
+                int first=meta.getInt("start"),last=meta.getInt("end"),count=last-first+1;
+                if(count<=0||meta.getInt("rows")!=count)throw new IllegalStateException("Numbered count mismatch for "+name);
+                numberedTotal+=count;
+                LinearLayout c=card(body);LinearLayout content=new LinearLayout(this);content.setGravity(Gravity.CENTER_VERTICAL);add(c,content);
+                LinearLayout labels=column();content.addView(labels,new LinearLayout.LayoutParams(0,-2,1));
+                add(labels,text(name,19,fg(),true));
                 String alvar=meta.optString("alvar","");
-                add(c,text(alvar+" · "+meta.getInt("start")+"–"+meta.getInt("end"),12,muted(),false));
+                add(labels,text(alvar+" · "+first+"–"+last,12,muted(),false));
+                TextView badge=text(String.valueOf(count),14,0xffffffff,true);badge.setGravity(Gravity.CENTER);
+                badge.setBackground(shape(ac(),12));
+                LinearLayout.LayoutParams badgeParams=new LinearLayout.LayoutParams(dp(54),dp(40));badgeParams.leftMargin=dp(8);
+                content.addView(badge,badgeParams);
                 c.setMinimumHeight(dp(72));c.setOnClickListener(v->{try{loadBook(idx);selected=0;
                     preferences.edit().putInt("book",idx).putInt("selected",0).apply();showIndex();}
                     catch(Exception ex){new AlertDialog.Builder(this).setMessage("This book could not open. The rest of the library is still available.")
                         .setPositiveButton("OK",null).show();}});shown++;
-            }catch(Exception ex){android.util.Log.w("Books","Skipping malformed list entry "+i,ex);}
+            }catch(Exception ex){android.util.Log.w("Books","Skipping malformed list entry "+i,ex);
+                LinearLayout error=card(body);add(error,text("Book "+(i+1)+" · count unavailable",13,fg(),true));}
         }
+        if(numberedTotal!=4000)add(card(body),text("Book counts need review: "+numberedTotal+" of 4,000 numbered pasurams.",13,ac(),true));
         if(shown==0)add(card(body),text("The book list could not be shown. Reading your last open book remains available.",13,muted(),false));}
     private boolean madalBook(){return bookIndex==21||bookIndex==22;}
     private int madalFirst(){return bookIndex==21?2673:2713;}
@@ -292,18 +305,59 @@ public final class MainActivity extends Activity {
     }
     private void showIndex(){if(!page.equals("Reader")&&!page.equals("Recite"))indexParent=page;
         page="Recite";start(bookName,bookAlvar+" · "+bookTamil+" · "+passageCountLabel(),"Recite");
-        // ListView virtualizes thousands of rows and its right-edge thumb can jump anywhere
-        // without loading prior pages or a repeated "Show next" action.
         root.removeView(currentScroll);
         ListView list=new ListView(this);list.setAdapter(new PasuramIndexAdapter());
         list.setDivider(null);list.setCacheColorHint(bg());list.setBackgroundColor(bg());
         list.setOnItemClickListener((parent,view,position,id)->showReader(position));
-        list.setVerticalScrollBarEnabled(true);list.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
-        if(verses.size()>10){list.setFastScrollEnabled(true);list.setFastScrollAlwaysVisible(true);}
-        // Restore the current verse as an orienting starting point when opening a book.
+        list.setVerticalScrollBarEnabled(false);
+        FrameLayout frame=new FrameLayout(this);frame.setBackgroundColor(bg());
+        frame.addView(list,new FrameLayout.LayoutParams(-1,-1));
+        if(verses.size()>10)addThemedFastScrubber(frame,list);
         list.setSelection(Math.max(0,Math.min(selected,verses.size()-1)));
         int navIndex=root.indexOfChild(bar);
-        root.addView(list,navIndex,new LinearLayout.LayoutParams(-1,0,1));
+        root.addView(frame,navIndex,new LinearLayout.LayoutParams(-1,0,1));
+    }
+    private void addThemedFastScrubber(FrameLayout frame,ListView list){
+        // Explicitly theme both the right-edge thumb and number bubble. Platform fast-scroll
+        // uses its own teal/green theme and changes across devices, so do not enable it here.
+        FrameLayout rail=new FrameLayout(this);
+        FrameLayout.LayoutParams railParams=new FrameLayout.LayoutParams(dp(48),-1,Gravity.RIGHT);
+        frame.addView(rail,railParams);
+        View track=new View(this);track.setBackground(shape(muted(),3));track.setAlpha(.32f);
+        FrameLayout.LayoutParams trackParams=new FrameLayout.LayoutParams(dp(3),-1,Gravity.RIGHT);
+        trackParams.setMargins(0,dp(12),dp(7),dp(12));rail.addView(track,trackParams);
+        TextView thumb=text("●",14,0xffffffff,true);thumb.setGravity(Gravity.CENTER);
+        thumb.setBackground(shape(ac(),14));
+        FrameLayout.LayoutParams thumbParams=new FrameLayout.LayoutParams(dp(34),dp(38),Gravity.RIGHT|Gravity.TOP);
+        thumbParams.rightMargin=dp(1);rail.addView(thumb,thumbParams);
+        TextView bubble=text(String.valueOf(verses.get(0).number),16,0xffffffff,true);
+        bubble.setGravity(Gravity.CENTER);bubble.setBackground(shape(ac(),16));bubble.setVisibility(View.GONE);
+        FrameLayout.LayoutParams bubbleParams=new FrameLayout.LayoutParams(dp(76),dp(44),Gravity.RIGHT|Gravity.TOP);
+        bubbleParams.rightMargin=dp(47);frame.addView(bubble,bubbleParams);
+        Runnable update=()->{int h=rail.getHeight()-dp(38),position=list.getFirstVisiblePosition();
+            if(h>0){float fraction=position/(float)Math.max(1,verses.size()-1);
+                thumb.setTranslationY(Math.round(Math.max(0,Math.min(1,fraction))*h));}};
+        list.setOnScrollListener(new android.widget.AbsListView.OnScrollListener(){
+            @Override public void onScrollStateChanged(android.widget.AbsListView view,int state){}
+            @Override public void onScroll(android.widget.AbsListView view,int first,int visible,int total){rail.post(update);}
+        });
+        rail.setOnTouchListener((v,event)->{
+            int action=event.getActionMasked();
+            if(action==MotionEvent.ACTION_DOWN||action==MotionEvent.ACTION_MOVE){
+                int available=Math.max(1,rail.getHeight()-dp(38));
+                float fraction=Math.max(0f,Math.min(1f,(event.getY()-dp(19))/available));
+                int position=Math.round(fraction*(verses.size()-1));
+                list.setSelection(position);
+                thumb.setTranslationY(Math.round(fraction*available));
+                bubble.setText(String.valueOf(verses.get(position).number));
+                bubble.setTranslationY(Math.round(fraction*available));bubble.setVisibility(View.VISIBLE);
+                return true;
+            }
+            if(action==MotionEvent.ACTION_UP||action==MotionEvent.ACTION_CANCEL){
+                bubble.setVisibility(View.GONE);return true;
+            }
+            return true;
+        });
     }
     private void showReader(int index){if(!page.equals("Reader"))readerParent=page;
         selected=Math.max(0,Math.min(verses.size()-1,index));preferences.edit().putInt("selected",selected).apply();page="Reader";
