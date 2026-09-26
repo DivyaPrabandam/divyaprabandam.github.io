@@ -1034,7 +1034,7 @@ public final class MainActivity extends Activity {
                 });
             },240);
         }public void afterTextChanged(Editable e){}});
-        add(modeCard,text("FIND A PASURAM",13,ac(),true));
+        TextView findLabel=text("FIND A PASURAM",13,ac(),true);pad(findLabel,0,22,0,8);add(modeCard,findLabel);
         String[] modeNames={"Text","Alvar","Number","Opening words"};
         for(int row=0;row<2;row++){LinearLayout modes=new LinearLayout(this);add(modeCard,modes);
             for(int col=0;col<2;col++){int i=row*2+col;final int choice=i;
