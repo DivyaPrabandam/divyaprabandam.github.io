@@ -1018,6 +1018,41 @@ public final class MainActivity extends Activity {
     }
     private int findMode=0;
     private String selectedOpeningLetter="";
+    private String selectedAlvar="";
+    private LinearLayout alvarChoices;
+    private int alvarListScrollY=0;
+    private void renderAlvarChoices(){
+        if(alvarChoices==null)return;
+        alvarChoices.removeAllViews();
+        if(selectedAlvar.isEmpty()){
+            add(alvarChoices,text("Select an Alvar",13,ac(),true));
+            java.util.LinkedHashSet<String> names=new java.util.LinkedHashSet<>();
+            for(int i=0;i<books.length();i++)names.add(books.optJSONObject(i).optString("alvar"));
+            for(String name:names)add(alvarChoices,button(name,()->{
+                alvarListScrollY=currentScroll==null?0:currentScroll.getScrollY();
+                selectedAlvar=name;renderAlvarChoices();
+                if(currentScroll!=null){ScrollView scroll=currentScroll;
+                    scroll.post(()->{if(scroll==currentScroll&&alvarChoices!=null)
+                        scroll.scrollTo(0,Math.min(alvarListScrollY,alvarChoices.getTop()));});}
+            },false));
+        }else{
+            add(alvarChoices,button("‹  All Alvars",this::showAllAlvars,false));
+            add(alvarChoices,text(selectedAlvar+" · Prabandhams",15,ac(),true));
+            int shown=0;
+            for(int i=0;i<books.length();i++){JSONObject meta=books.optJSONObject(i);
+                if(!selectedAlvar.equals(meta.optString("alvar")))continue;
+                final int bi=i;
+                add(alvarChoices,button(meta.optString("name")+" · "+meta.optInt("start")+"–"+meta.optInt("end"),
+                    ()->{loadBook(bi);selected=0;showIndex();},false));shown++;
+            }
+            if(shown==0)add(alvarChoices,text("No prabandhams found.",13,muted(),false));
+        }
+    }
+    private void showAllAlvars(){
+        selectedAlvar="";renderAlvarChoices();
+        if(currentScroll!=null){ScrollView scroll=currentScroll;
+            scroll.post(()->{if(scroll==currentScroll)scroll.scrollTo(0,alvarListScrollY);});}
+    }
     private void showSearch(){searchGeneration++;if(currentSearch!=null)currentSearch.cancel(true);page="Search";start("Find a pasuram","Search all 4,000 · offline","Search");
         LinearLayout modeCard=card(body);add(modeCard,text("SEARCH TEXT",13,ac(),true));
         EditText input=new EditText(this);input.setTextColor(fg());input.setHintTextColor(muted());input.setSingleLine(true);input.setTextSize(16);input.setHint(findMode==2?"Type 1–4000":findMode==3?"Tamil or transliterated opening words":"Tamil, transliteration, phrase or number");
@@ -1046,7 +1081,7 @@ public final class MainActivity extends Activity {
         String[] modeNames={"Text","Alvar","Number","Opening words"};
         for(int row=0;row<2;row++){LinearLayout modes=new LinearLayout(this);add(modeCard,modes);
             for(int col=0;col<2;col++){int i=row*2+col;final int choice=i;
-                modes.addView(button(modeNames[i],()->{findMode=choice;showSearch();},findMode==i),new LinearLayout.LayoutParams(0,dp(48),1));}}
+                modes.addView(button(modeNames[i],()->{findMode=choice;selectedAlvar="";showSearch();},findMode==i),new LinearLayout.LayoutParams(0,dp(48),1));}}
         if(findMode==3){
             LinearLayout letters=card(body);add(letters,text("Or tap the first letter:",13,muted(),false));
             String alphabet="அஆஇஈஉஊஎஏஐஒஓகசஞதநபமயலவ";
@@ -1077,18 +1112,10 @@ public final class MainActivity extends Activity {
             }
         }
         if(findMode==1){
-            java.util.LinkedHashSet<String> names=new java.util.LinkedHashSet<>();
-            for(int i=0;i<books.length();i++)names.add(books.optJSONObject(i).optString("alvar"));
-            LinearLayout picks=card(body);add(picks,text("Select an Alvar",13,ac(),true));
-            for(String name:names)add(picks,button(name,()->{
-                results.removeAllViews();int shown=0;
-                for(int i=0;i<books.length();i++){JSONObject meta=books.optJSONObject(i);if(!name.equals(meta.optString("alvar")))continue;
-                    final int bi=i;add(results,button(meta.optString("name")+" · "+meta.optInt("start")+"–"+meta.optInt("end"),()->{loadBook(bi);selected=0;showIndex();},false));shown++;}
-                if(shown==0)add(results,text("No prabandhams found.",13,muted(),false));
-            },false));
-        }
+            alvarChoices=card(body);renderAlvarChoices();
+        }else alvarChoices=null;
         add(body,results);
-        add(card(results),text("Search the offline library, or choose an Alvar.",13,muted(),false));
+        if(findMode!=1)add(card(results),text("Search the offline library, or choose an Alvar.",13,muted(),false));
         add(body,text("Text searches all lines. Opening words searches verse openings. Numbers open exact pasurams.",11,muted(),false));
     }
     private static final class SearchEntry {
@@ -1253,6 +1280,9 @@ public final class MainActivity extends Activity {
                 long now=android.os.SystemClock.elapsedRealtime();
                 if(now-lastRootBackAt<2000){finish();return;}
                 lastRootBackAt=now;Toast.makeText(this,"Press back again to exit",Toast.LENGTH_SHORT).show();return;
+            case "Search":
+                if(findMode==1&&!selectedAlvar.isEmpty()){showAllAlvars();return;}
+                showHome();return;
             default: showHome();
         }
     }
