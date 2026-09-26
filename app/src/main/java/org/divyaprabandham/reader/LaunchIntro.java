@@ -11,6 +11,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.Gravity;
 import android.view.Window;
+import android.view.KeyEvent;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -30,8 +31,12 @@ public final class LaunchIntro extends Activity {
     private final Bitmap[] photos=new Bitmap[FRAMES.length];
     private ImageView front,back;
     private Runnable frameTick;
+    private boolean introMuted=false;
+    private int volumeCuts=0;
+    private TextView sound;
     @Override public void onCreate(Bundle state){
         super.onCreate(state);getWindow().requestFeature(Window.FEATURE_NO_TITLE);
+        if(getSharedPreferences("intro",MODE_PRIVATE).getBoolean("skip-future",false)){enterApp();return;}
         FrameLayout stage=new FrameLayout(this);stage.setBackgroundColor(0xff190f09);
         front=new ImageView(this);back=new ImageView(this);
         front.setScaleType(ImageView.ScaleType.FIT_CENTER);back.setScaleType(ImageView.ScaleType.FIT_CENTER);
@@ -41,6 +46,12 @@ public final class LaunchIntro extends Activity {
         skip.setGravity(Gravity.CENTER);skip.setContentDescription("Skip opening intro");
         FrameLayout.LayoutParams sp=new FrameLayout.LayoutParams(dp(110),dp(48),Gravity.TOP|Gravity.END);
         sp.topMargin=dp(24);sp.rightMargin=dp(16);stage.addView(skip,sp);
+        sound=new TextView(this);sound.setText("♪ Sound on");sound.setTextSize(14);sound.setTextColor(Color.WHITE);
+        sound.setGravity(Gravity.CENTER);sound.setContentDescription("Mute opening music");
+        FrameLayout.LayoutParams soundParams=new FrameLayout.LayoutParams(dp(120),dp(48),Gravity.TOP|Gravity.START);
+        soundParams.topMargin=dp(24);soundParams.leftMargin=dp(16);stage.addView(sound,soundParams);
+        sound.setOnClickListener(v->{introMuted=!introMuted;mutePlayback(introMuted);sound.setText(introMuted?"♪ Muted":"♪ Sound on");
+            sound.setContentDescription(introMuted?"Unmute opening music":"Mute opening music");});
         skip.setOnClickListener(v->enterApp());setContentView(stage);
         try{
             // Decode before playback so image I/O never delays a musical cue.
@@ -80,6 +91,18 @@ public final class LaunchIntro extends Activity {
         }).start();
         shown=index;
     }
+    private void mutePlayback(boolean muted){if(player!=null)try{player.setVolume(muted?0f:1f,muted?0f:1f);}catch(Exception ignored){}}
+    @Override public boolean dispatchKeyEvent(KeyEvent event){
+        if(!leaving&&(event.getKeyCode()==KeyEvent.KEYCODE_VOLUME_UP||event.getKeyCode()==KeyEvent.KEYCODE_VOLUME_DOWN)){
+            if(event.getAction()==KeyEvent.ACTION_DOWN&&event.getRepeatCount()==0){
+                volumeCuts++;introMuted=true;mutePlayback(true);
+                if(sound!=null){sound.setText("♪ Muted");sound.setContentDescription("Unmute opening music");}
+                if(volumeCuts>=2)getSharedPreferences("intro",MODE_PRIVATE).edit().putBoolean("skip-future",true).apply();
+            }
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
+    }
     private int dp(int n){return (int)(getResources().getDisplayMetrics().density*n+.5f);}
     private void enterApp(){if(leaving)return;leaving=true;handler.removeCallbacksAndMessages(null);
         if(player!=null){player.release();player=null;}
@@ -88,7 +111,8 @@ public final class LaunchIntro extends Activity {
     @Override public void onBackPressed(){enterApp();}
     @Override protected void onDestroy(){handler.removeCallbacksAndMessages(null);
         if(player!=null){player.release();player=null;}
-        front.animate().cancel();back.animate().cancel();front.setImageDrawable(null);back.setImageDrawable(null);
+        if(front!=null){front.animate().cancel();front.setImageDrawable(null);}
+        if(back!=null){back.animate().cancel();back.setImageDrawable(null);}
         for(Bitmap photo:photos)if(photo!=null)photo.recycle();super.onDestroy();
     }
 }

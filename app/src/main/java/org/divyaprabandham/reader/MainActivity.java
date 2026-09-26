@@ -8,6 +8,9 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Base64;
 import android.widget.Spinner;
+import android.widget.SeekBar;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 import java.io.IOException;
@@ -54,6 +57,12 @@ public final class MainActivity extends Activity {
     private CorrectionQueue correctionQueue;
     private CorrectionDrafts correctionDrafts;
     private ContentUpdates contentUpdates;
+    private AudioCatalog audioCatalog;
+    private AudioController audioController;
+    private TextView audioTitle,audioTime,audioStatus,miniAudioTitle;
+    private Button audioToggle,audioLoop,audioGroupLoop,audioAB,miniAudioToggle;
+    private SeekBar audioSeek;
+    private boolean audioSeekDragging;
     private final ExecutorService updateWorker=Executors.newSingleThreadExecutor();
     private String correctionImage=null;
     private TextView correctionImageStatus;
@@ -90,6 +99,8 @@ public final class MainActivity extends Activity {
                 android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,systemBackCallback);
         }
         correctionQueue=new CorrectionQueue(this);correctionDrafts=new CorrectionDrafts(this);contentUpdates=new ContentUpdates(this);ContentUpdates.schedule(this);
+        try{audioCatalog=new AudioCatalog(this);audioController=new AudioController(this);audioController.listen(this::updateAudioControls);audioController.tick();}
+        catch(Exception ex){android.util.Log.w("Audio","Catalog unavailable",ex);}
         theme=preferences.getInt("theme",0); selected=preferences.getInt("selected",0);textSize=preferences.getInt("size",21);
         elderMode=preferences.getBoolean("elder",false);
         transliteration=preferences.getBoolean("transliteration",false);
@@ -144,6 +155,7 @@ public final class MainActivity extends Activity {
     private void start(String title,String subtitle,String active){
         getWindow().setStatusBarColor(bg());getWindow().setNavigationBarColor(bg());
         getWindow().getDecorView().setSystemUiVisibility(theme==1||theme==2?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0);
+        audioTitle=null;audioTime=null;audioStatus=null;audioToggle=null;audioLoop=null;audioGroupLoop=null;audioAB=null;audioSeek=null;miniAudioTitle=null;miniAudioToggle=null;
         root=column();root.setBackgroundColor(bg());
         root.setOnApplyWindowInsetsListener((v,insets)->{
             // Android 15+ enforces edge-to-edge at this target SDK; older releases lay out below bars.
@@ -169,6 +181,7 @@ public final class MainActivity extends Activity {
         TextView sub=text(subtitle,12,muted(),false);pad(sub,20,3,20,13);add(root,sub);
         ScrollView scroll=new ScrollView(this);currentScroll=scroll;scroll.setFillViewport(true);scroll.setVerticalScrollBarEnabled(false);body=column();scroll.addView(body);
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        if(audioController!=null&&audioController.track()!=null)showMiniAudio();
         bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER);bar.setBackgroundColor(bg());pad(bar,7,8,7,8);add(root,bar);
         String[] tabs={"Home","Recite","Learn","Explore","Search"};for(String tab:tabs){
             TextView link=text(tab,11,active.equals(tab)?ac():muted(),active.equals(tab));link.setGravity(Gravity.CENTER);link.setMinimumHeight(dp(elderMode?56:48));
@@ -209,7 +222,7 @@ public final class MainActivity extends Activity {
         add(card(body),button(elderMode?"Elder mode on · turn off":"Elder mode · larger text and controls",()->{
             elderMode=!elderMode;preferences.edit().putBoolean("elder",elderMode).apply();showHome();
         },elderMode));
-        add(card(body),text("All 4,000 numbered pasurams are available offline. Audio playback is coming in the next milestone.",13,muted(),false));
+        add(card(body),text("All 4,000 numbered pasurams are available offline. Recitation can stream or be saved one track at a time.",13,muted(),false));
     }
     private void showBooks(){page="Books";start("The 4,000 pasurams","25 prabandhams · offline","Recite");
         int shown=0;
@@ -246,6 +259,8 @@ public final class MainActivity extends Activity {
     private void showReader(int index){if(!page.equals("Reader"))readerParent=page;
         selected=Math.max(0,Math.min(verses.size()-1,index));preferences.edit().putInt("selected",selected).apply();page="Reader";
         Verse v=verses.get(selected);start(bookName+" "+(selected+1),bookAlvar+" · "+(bookIndex==21?"pasurams 2673–2712":bookIndex==22?"pasurams 2713–2790":"pasuram "+v.number+" of 4,000"),"Recite");
+        // Listening remains reachable before the full verse text, including long madals.
+        if(audioCatalog!=null&&audioController!=null)addReaderAudio(v);
         LinearLayout c=card(body);add(c,text(bookTamil+" · "+bookAlvar,15,ac(),true));
         TextView verse=text(transliteration?v.latin:v.tamil,textSize,fg(),false);verse.setTextSize(textSize+(elderMode?4:0));verse.setLineSpacing(dp(elderMode?12:7),elderMode?1.5f:1.28f);pad(verse,0,22,0,20);add(c,verse);
         if(bookIndex==21||bookIndex==22)add(c,text("This complete madal is one source passage covering a numbered range; individual verse boundaries are not marked in the site data.",11,muted(),false));
@@ -274,8 +289,88 @@ public final class MainActivity extends Activity {
         LinearLayout move=card(body);LinearLayout buttons=new LinearLayout(this);add(move,buttons);
         Button previous=button("‹ Previous",()->showReader(selected-1),false);previous.setEnabled(selected>0);buttons.addView(previous,new LinearLayout.LayoutParams(0,dp(48),1));
         Button next=button("Next ›",()->showReader(selected+1),true);next.setEnabled(selected<verses.size()-1);buttons.addView(next,new LinearLayout.LayoutParams(0,dp(48),1));
-        if(!focused)add(card(body),text("Audio playback is coming in the next milestone.",11,muted(),false));
-
+    }
+    private String audioClock(int milliseconds){int seconds=Math.max(0,milliseconds/1000);
+        return String.format(java.util.Locale.ROOT,"%d:%02d",seconds/60,seconds%60);}
+    private void updateAudioControls(){
+        if(audioController==null)return;
+        AudioCatalog.Track track=audioController.track();
+        if(audioTitle!=null)audioTitle.setText(track==null?"Audio":track.title+" · "+(audioController.queueIndex()+1)+"/"+audioController.queueSize());
+        if(miniAudioTitle!=null)miniAudioTitle.setText(track==null?"Audio":track.title);
+        if(miniAudioToggle!=null)miniAudioToggle.setText(audioController.playing()?"Pause":"Play");
+        if(audioToggle!=null)audioToggle.setText(audioController.playing()?"Pause":"Play");
+        if(audioLoop!=null)audioLoop.setText(audioController.repeatOne()?"Repeat track ✓":"Repeat track");
+        if(audioGroupLoop!=null)audioGroupLoop.setText(audioController.repeatGroup()?"Repeat group ✓":"Repeat group");
+        if(audioAB!=null)audioAB.setText(audioController.markA()<0?"Set A":audioController.markB()<0?"Set B":"Clear A–B");
+        if(audioTime!=null)audioTime.setText(audioClock(audioController.position())+" / "+audioClock(audioController.duration()));
+        if(audioSeek!=null&&!audioSeekDragging){int d=audioController.duration();audioSeek.setProgress(d>0?(int)(1000L*audioController.position()/d):0);}
+        if(audioStatus!=null)audioStatus.setText(audioController.error().isEmpty()?audioController.cached()?"Saved offline":"Streaming · save for offline use":audioController.error());
+    }
+    private void showMiniAudio(){
+        LinearLayout mini=new LinearLayout(this);mini.setGravity(Gravity.CENTER_VERTICAL);mini.setBackgroundColor(surface());pad(mini,12,5,12,5);
+        miniAudioTitle=text(audioController.track().title,12,fg(),true);mini.addView(miniAudioTitle,new LinearLayout.LayoutParams(0,dp(48),1));
+        miniAudioToggle=button(audioController.playing()?"Pause":"Play",audioController::toggle,false);
+        mini.addView(miniAudioToggle,new LinearLayout.LayoutParams(dp(90),dp(46)));
+        root.addView(mini,new LinearLayout.LayoutParams(-1,dp(58)));
+    }
+    private void showCurrentPage(){switch(page){case "Reader":showReader(selected);break;case "Home":showHome();break;case "Books":showBooks();break;case "ContentSettings":showContentSettings();break;default:break;}}
+    private void playAudio(ArrayList<AudioCatalog.Track> tracks,int start){
+        if(tracks.isEmpty()){Toast.makeText(this,"No recording for this passage yet.",Toast.LENGTH_LONG).show();return;}
+        audioController.play(tracks,start);showCurrentPage();
+    }
+    private void addReaderAudio(Verse currentVerse){
+        LinearLayout panel=card(body);add(panel,text("LISTEN",13,ac(),true));
+        AudioCatalog.Track individual=audioCatalog.verse(currentVerse.number);
+        if(individual!=null){
+            add(panel,button("Play this pasuram",()->{ArrayList<AudioCatalog.Track> one=new ArrayList<>();one.add(individual);playAudio(one,0);},true));
+            int[] range=audioCatalog.groupRange(books.optJSONObject(bookIndex).optString("id"),currentVerse.number,books.optJSONObject(bookIndex).optInt("end"));
+            ArrayList<AudioCatalog.Track> group=new ArrayList<>();int startIndex=0;
+            for(int n=range[0];n<=range[1];n++){AudioCatalog.Track item=audioCatalog.verse(n);if(item!=null){if(n==currentVerse.number)startIndex=group.size();group.add(item);}}
+            if(group.size()>1){final int from=startIndex;add(panel,button("Play group "+range[0]+"–"+range[1]+" ("+group.size()+" tracks)",()->{
+                playAudio(group,from);audioController.repeatGroupOn();
+            },false));}
+        }
+        ArrayList<AudioCatalog.Track> recordings=audioCatalog.recordings(books.optJSONObject(bookIndex).optString("id"),
+            audioCatalog.groupRange(books.optJSONObject(bookIndex).optString("id"),currentVerse.number,books.optJSONObject(bookIndex).optInt("end"))[0]);
+        for(AudioCatalog.Track recording:recordings){
+            add(panel,button(recordings.size()==1?"Play full group recording":"Play "+recording.title,
+                ()->{ArrayList<AudioCatalog.Track> one=new ArrayList<>();one.add(recording);playAudio(one,0);},false));
+        }
+        if(individual==null&&recordings.isEmpty())add(panel,text("No verified recording is mapped to this passage yet.",12,muted(),false));
+        if(bookIndex==21||bookIndex==22)add(panel,text("This madal is one continuous passage. There are no published per-line audio boundaries.",12,muted(),false));
+        if(audioController.track()!=null){
+            add(panel,text("Now playing controls",14,fg(),true));
+            audioTitle=text("",14,fg(),true);add(panel,audioTitle);
+            audioStatus=text("",12,muted(),false);add(panel,audioStatus);
+            audioTime=text("",12,fg(),false);add(panel,audioTime);
+            audioSeek=new SeekBar(this);audioSeek.setMax(1000);add(panel,audioSeek);
+            audioSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+                public void onStartTrackingTouch(SeekBar seek){audioSeekDragging=true;}
+                public void onStopTrackingTouch(SeekBar seek){audioSeekDragging=false;audioController.seek(audioController.duration()*seek.getProgress()/1000L);}
+                public void onProgressChanged(SeekBar seek,int progress,boolean user){}
+            });
+            LinearLayout transport=new LinearLayout(this);add(panel,transport);
+            transport.addView(button("‹",audioController::previous,false),new LinearLayout.LayoutParams(0,dp(48),1));
+            audioToggle=button("Play",audioController::toggle,true);transport.addView(audioToggle,new LinearLayout.LayoutParams(0,dp(48),2));
+            transport.addView(button("›",audioController::next,false),new LinearLayout.LayoutParams(0,dp(48),1));
+            LinearLayout looping=new LinearLayout(this);add(panel,looping);
+            audioLoop=button("Repeat track",audioController::one,false);looping.addView(audioLoop,new LinearLayout.LayoutParams(0,dp(48),1));
+            audioGroupLoop=button("Repeat group",audioController::group,false);looping.addView(audioGroupLoop,new LinearLayout.LayoutParams(0,dp(48),1));
+            LinearLayout ab=new LinearLayout(this);add(panel,ab);
+            audioAB=button("Set A",()->{if(audioController.markA()<0)audioController.setA();else if(audioController.markB()<0)audioController.setB();else audioController.clearAB();},false);
+            ab.addView(audioAB,new LinearLayout.LayoutParams(0,dp(48),1));
+            ab.addView(button("Save offline",audioController::download,false),new LinearLayout.LayoutParams(0,dp(48),1));
+            if(audioController.queueSize()>1)add(panel,text("This group plays in sequence. Repeat group loops the whole set; Save offline saves the current track only.",12,muted(),false));
+            add(panel,text("Tap a speed for quick change. Hold it for the precise dial.",12,muted(),false));
+            LinearLayout rates=new LinearLayout(this);add(panel,rates);
+            for(float rate:new float[]{.5f,.75f,1f,1.25f,1.5f}){
+                Button chip=button(String.format(java.util.Locale.ROOT,"%.2f×",rate),()->audioController.speed(rate),false);
+                rates.addView(chip,new LinearLayout.LayoutParams(0,dp(48),1));
+                chip.setOnLongClickListener(view->{audioController.speed(rate);SpeedDial dial=new SpeedDial(this,rate,audioController::speed);
+                    new AlertDialog.Builder(this).setTitle("Precise speed").setView(dial).setPositiveButton("Done",null).show();return true;});
+            }
+            updateAudioControls();
+        }
     }
     private void enterCorrectionMode(){
         new AlertDialog.Builder(this).setTitle("Correction mode")
@@ -451,6 +546,11 @@ public final class MainActivity extends Activity {
             prefs.edit().putString("image-network",choice).apply();showContentSettings();
         },mode.equals(choice)));}
         add(card(body),text("Images will appear here once sourced and published. Changing this setting never removes bundled reading text.",12,muted(),false));
+        if(getSharedPreferences("intro",MODE_PRIVATE).getBoolean("skip-future",false))
+            add(card(body),button("Show opening again",()->{
+                getSharedPreferences("intro",MODE_PRIVATE).edit().putBoolean("skip-future",false).apply();
+                Toast.makeText(this,"Opening restored for the next launch.",Toast.LENGTH_LONG).show();showContentSettings();
+            },false));
     }
     private void checkContentNow(){
         if(manualCheckRunning)return;
@@ -609,7 +709,7 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onDestroy(){if(Build.VERSION.SDK_INT>=33&&systemBackCallback!=null)
             getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(systemBackCallback);
-        searchGeneration++;mainHandler.removeCallbacksAndMessages(null);if(currentSearch!=null)currentSearch.cancel(true);searchWorker.shutdownNow();correctionWorker.shutdownNow();updateWorker.shutdownNow();super.onDestroy();}
+        searchGeneration++;mainHandler.removeCallbacksAndMessages(null);if(currentSearch!=null)currentSearch.cancel(true);searchWorker.shutdownNow();correctionWorker.shutdownNow();updateWorker.shutdownNow();if(audioController!=null)audioController.close();super.onDestroy();}
     private String upLabel(){
         switch(page){
             case "Reader": return parentLabel(readerParent);

@@ -1,0 +1,7 @@
+Android listening alpha v18:
+
+Source: current published Divya Prabandham site's assets/c-GGT4EIJG.js. Its 3,882 individual tracks map exactly to the 3,882 ordinary rows of the bundled canonical corpus. The 2 long madals have complete-passsage group recordings, not artificial per-line splits. There are also 240 full-group tracks in 236 groups. Mapping is frozen in assets/audio/{verses,groups}.json. It is source-derived; recheck source mapping before changing it. Links point to the existing media relay. Six sampled URLs returned HTTP 206 audio with MP3/MP4 types; #474 downloaded fully and probed as 29.57-second MP3. Website paths retained in original book JSON are legacy and are not used to play audio.
+
+Player: per-pasuram play, current group of individual verse tracks, full-group recording, one/group repeat, A-B within the currently playing actual track, per-track offline cache, 0.50x–2.00x dial (0.01 precision) opened by long-pressing a preset. Song splash is unchanged except the requested mute button and two hardware-volume presses to skip future intros, with restore in Content settings.
+
+This APK is an alpha: runtime listening must be tested on the owner's phone. Audio stops when Activity is destroyed, no foreground media service; keeping app open or using the screen timeout may be necessary. Download is one track at a time. Do not call this all 4,000 clips offline, or promise silent background playback.

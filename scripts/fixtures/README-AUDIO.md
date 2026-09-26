@@ -1,0 +1,6 @@
+Audio provenance and verification
+
+- Canonical source: the published site's current `assets/c-GGT4EIJG.js` read from https://divyaprabandam.github.io/ on September 26, 2026. It exports mappings for 3,882 individual verse rows and 236 group keys with 240 recordings. We copied only its existing opaque media relay URLs; no filename guesses.
+- The current corpus has 3,884 source passage rows. 3,882 ordinary rows have individual clips. The remaining two are the two full madals 2673-2712 and 2713-2790, represented as one source passage each; they have complete group recordings. Do not invent per-line splits.
+- Run `python3 scripts/fixtures/test_audio_catalog.py` to confirm mapping coverage. Then sample the relay itself: GET with `Range: bytes=0-1023` returns HTTP 206 and `audio/mpeg` for #1, #474, #2578, #3893, #4000; #1409 returns `audio/mp4` and m4a bytes. #474 full GET was valid 29.57-second MP3.
+- The old `/media/recitation/` paths in the canonical JSON do not work on GitHub Pages; do not use them. The live site's relay mapping is the actual source of truth for audio URLs. It has no content hashes in this bundle, so offline downloads check HTTPS host/type/length/completion but cannot authenticate with a signed per-file digest. The controls do not present them as hash-verified.
