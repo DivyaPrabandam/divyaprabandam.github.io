@@ -835,7 +835,8 @@ public final class MainActivity extends Activity {
         if(ContentUpdates.configured()){
             try{int version=contentUpdates.activeVersion();
                 add(update,text(version>0?"Reading text · verified update "+version:"Reading text · offline edition",13,fg(),true));
-                if(version>0)add(update,text("This number changes only when a newer signed text edition is published.",11,muted(),false));
+                if(version>0){TextView note=text("This number changes only when a newer signed text edition is published.",11,muted(),false);
+                    pad(note,0,7,0,12);add(update,note);}
             }catch(Exception ex){android.util.Log.w("ContentUpdates","Status unavailable",ex);}
             String gate=getSharedPreferences("content-settings",MODE_PRIVATE).getString("update-required",null);
             if(gate!=null){add(update,text("App update required for new content. Saved reading text remains available.",13,fg(),false));
@@ -851,7 +852,8 @@ public final class MainActivity extends Activity {
         openingOptions.addView(button(muted?"Music: Off":"Music: On",()->{
             intro.edit().putBoolean("music-off",!muted).apply();showSettings();
         },!muted),new LinearLayout.LayoutParams(0,dp(58),1));
-        add(opening,text("Music controls only the opening song. The animation still plays silently.",11,muted(),false));
+        TextView openingNote=text("Music controls only the opening song. The animation still plays silently.",11,muted(),false);
+        pad(openingNote,0,9,0,12);add(opening,openingNote);
         LinearLayout audio=card(body);add(audio,text("PLAYER",13,ac(),true));
         if(audioController!=null){
             LinearLayout playerOptions=new LinearLayout(this);add(audio,playerOptions);
