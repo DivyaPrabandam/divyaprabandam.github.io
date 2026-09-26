@@ -180,7 +180,8 @@ public final class MainActivity extends Activity {
         if(landscapePlayer){
             LinearLayout frame=new LinearLayout(this);frame.setBackgroundColor(bg());
             LinearLayout side=buildLandscapePlayer();
-            int sideWidth=Math.min(dp(290),(int)(getResources().getDisplayMetrics().widthPixels*.43f));
+            // Match the portrait dock's 94dp thickness, rotated into a narrow side rail.
+            int sideWidth=dp(94);
             if(preferences.getBoolean("player-side-right",false)){
                 frame.addView(root,new LinearLayout.LayoutParams(0,-1,1));
                 frame.addView(side,new LinearLayout.LayoutParams(sideWidth,-1));
@@ -369,38 +370,51 @@ public final class MainActivity extends Activity {
         dialog.show();
     }
     private LinearLayout buildLandscapePlayer(){
-        LinearLayout side=column();side.setBackground(shape(surface(),theme==1?8:16));pad(side,10,6,10,6);
-        TextView header=text("NOW PLAYING",11,ac(),true);add(side,header);
-        audioTitle=text("",15,fg(),true);audioTitle.setMaxLines(2);add(side,audioTitle);
-        audioStatus=text("",11,muted(),false);add(side,audioStatus);
-        audioTime=text("",12,fg(),false);add(side,audioTime);
-        audioSeek=new SeekBar(this);audioSeek.setMax(1000);add(side,audioSeek);
-        audioSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
-            public void onStartTrackingTouch(SeekBar seek){audioSeekDragging=true;}
-            public void onStopTrackingTouch(SeekBar seek){audioSeekDragging=false;audioController.seek(audioController.duration()*seek.getProgress()/1000L);}
-            public void onProgressChanged(SeekBar seek,int progress,boolean user){}
-        });
-        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(false);
-        LinearLayout stack=column();scroll.addView(stack);side.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        audioToggle=button("Play",audioController::toggle,true);add(stack,audioToggle);
-        add(stack,button("‹ Previous recording",audioController::previous,false));
-        add(stack,button("Next recording ›",audioController::next,false));
-        audioLoop=button("Repeat track",audioController::one,false);add(stack,audioLoop);
-        audioGroupLoop=button("Repeat group",audioController::group,false);add(stack,audioGroupLoop);
-        audioAB=button("Set A",()->{if(audioController.markA()<0)audioController.setA();else if(audioController.markB()<0)audioController.setB();else audioController.clearAB();},false);
-        add(stack,audioAB);add(stack,button("Save offline",audioController::download,false));
-        for(float rate:new float[]{.75f,1f,1.25f}){
-            Button chip=button(String.format(java.util.Locale.ROOT,"%.2f× · hold for dial",rate),()->audioController.speed(rate),false);
-            add(stack,chip);chip.setOnLongClickListener(v->{audioController.speed(rate);
-                new AlertDialog.Builder(this).setTitle("Precise speed")
-                    .setView(new SpeedDial(this,rate,audioController::speed)).setPositiveButton("Done",null).show();return true;});
-        }
-        add(stack,button("More speeds and controls",this::showPlayerSheet,false));
+        LinearLayout rail=column();rail.setGravity(Gravity.CENTER_HORIZONTAL);
+        rail.setBackground(shape(surface(),theme==1?8:16));pad(rail,5,5,5,5);
+        TextView tune=text("♫",22,ac(),true);tune.setGravity(Gravity.CENTER);
+        rail.addView(tune,new LinearLayout.LayoutParams(-1,dp(34)));
+        miniAudioTitle=text(audioController.track().title,11,fg(),true);
+        miniAudioTitle.setSingleLine(true);miniAudioTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        miniAudioTitle.setGravity(Gravity.CENTER);add(rail,miniAudioTitle);
+        miniAudioTime=text("",10,muted(),false);miniAudioTime.setGravity(Gravity.CENTER);add(rail,miniAudioTime);
+        ScrollView controls=new ScrollView(this);controls.setFillViewport(false);controls.setVerticalScrollBarEnabled(false);
+        LinearLayout stack=column();controls.addView(stack);rail.addView(controls,new LinearLayout.LayoutParams(-1,0,1));
+        miniAudioToggle=button("▶",audioController::toggle,true);
+        miniAudioToggle.setContentDescription("Play or pause audio");add(stack,miniAudioToggle);
+        Button previous=button("‹",audioController::previous,false);previous.setContentDescription("Previous recording");add(stack,previous);
+        Button next=button("›",audioController::next,false);next.setContentDescription("Next recording");add(stack,next);
+        Button more=button("⋯",this::showPlayerSheet,false);more.setContentDescription("All audio controls");add(stack,more);
+        // Vertical seek is drawn in the narrow rail. Exact seeking and all presets remain in the full sheet.
+        View progress=new View(this){
+            private final android.graphics.Paint pen=new android.graphics.Paint(3);
+            @Override protected void onDraw(android.graphics.Canvas canvas){
+                float cx=getWidth()/2f,top=dp(9),bottom=getHeight()-dp(9);
+                int duration=audioController.duration();float fraction=duration>0?Math.min(1f,(float)audioController.position()/duration):0f;
+                pen.setStrokeWidth(dp(4));pen.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+                pen.setColor(muted());canvas.drawLine(cx,top,cx,bottom,pen);
+                pen.setColor(ac());float y=bottom-fraction*(bottom-top);canvas.drawLine(cx,y,cx,bottom,pen);
+                canvas.drawCircle(cx,y,dp(7),pen);
+            }
+            @Override public boolean onTouchEvent(android.view.MotionEvent e){
+                if(e.getAction()==android.view.MotionEvent.ACTION_DOWN||e.getAction()==android.view.MotionEvent.ACTION_MOVE||e.getAction()==android.view.MotionEvent.ACTION_UP){
+                    float top=dp(9),bottom=getHeight()-dp(9);
+                    if(bottom>top)audioController.seek((long)(audioController.duration()*Math.max(0f,Math.min(1f,(bottom-e.getY())/(bottom-top)))));
+                    invalidate();return true;
+                }
+                return false;
+            }
+        };progress.setContentDescription("Vertical playback position; drag to seek");
+        stack.addView(progress,new LinearLayout.LayoutParams(-1,dp(76)));
+        mainHandler.post(new Runnable(){public void run(){if(landscapePlayer&&progress.isAttachedToWindow()){
+            progress.invalidate();mainHandler.postDelayed(this,350);
+        }}});
         boolean right=preferences.getBoolean("player-side-right",false);
-        add(side,button(right?"Move player left":"Move player right",()->{
+        Button side=button(right?"⇦":"⇨",()->{
             preferences.edit().putBoolean("player-side-right",!right).apply();showCurrentPage();
-        },false));
-        updateAudioControls();return side;
+        },false);side.setContentDescription(right?"Move player left":"Move player right");
+        rail.addView(side,new LinearLayout.LayoutParams(-1,dp(46)));
+        updateAudioControls();return rail;
     }
     private String audioClock(int milliseconds){int seconds=Math.max(0,milliseconds/1000);
         return String.format(java.util.Locale.ROOT,"%d:%02d",seconds/60,seconds%60);}
