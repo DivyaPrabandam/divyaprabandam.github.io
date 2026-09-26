@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application android:allowBackup="false" android:label="Divya Prabandham" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:usesCleartextTraffic="false">
         <service android:name=".CorrectionRetryJob" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true"/>
-        <activity android:name=".MainActivity" android:exported="false" android:screenOrientation="unspecified"/>
+        <activity android:name=".MainActivity" android:exported="false" android:screenOrientation="unspecified" android:configChanges="orientation|screenSize"/>
         <activity android:name=".LaunchIntro" android:exported="true" android:screenOrientation="unspecified">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
         </activity>

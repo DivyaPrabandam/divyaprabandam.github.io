@@ -76,6 +76,7 @@ public final class MainActivity extends Activity {
     private TextView correctionImageStatus;
     private static final int PICK_CORRECTION_IMAGE=481;
     private LinearLayout root, body, bar;
+    private boolean landscapePlayer=false;
     private int theme=0, selected=0, textSize=21;
     private long lastSearchElapsedMs=0;
     private android.os.Handler mainHandler=new android.os.Handler(android.os.Looper.getMainLooper());
@@ -165,6 +166,8 @@ public final class MainActivity extends Activity {
         getWindow().getDecorView().setSystemUiVisibility(theme==1||theme==2?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0);
         audioTitle=null;audioTime=null;audioStatus=null;audioToggle=null;audioLoop=null;audioGroupLoop=null;audioAB=null;audioSeek=null;miniAudioTitle=null;miniAudioTime=null;miniAudioSeek=null;miniAudioToggle=null;
         root=column();root.setBackgroundColor(bg());
+        landscapePlayer=getResources().getConfiguration().orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE
+            &&audioController!=null&&audioController.track()!=null;
         root.setOnApplyWindowInsetsListener((v,insets)->{
             // Android 15+ enforces edge-to-edge at this target SDK; older releases lay out below bars.
             if(Build.VERSION.SDK_INT>=35)root.setPadding(0,insets.getSystemWindowInsetTop(),0,insets.getSystemWindowInsetBottom());
@@ -174,7 +177,19 @@ public final class MainActivity extends Activity {
         // Navigation replaces this view within MainActivity, not the launch intro.
         // Keep the whole screen opaque at its final position; fading its root from 50%
         // caused a black flash on AMOLED every time Home or another tab was tapped.
-        setContentView(root);
+        if(landscapePlayer){
+            LinearLayout frame=new LinearLayout(this);frame.setBackgroundColor(bg());
+            LinearLayout side=buildLandscapePlayer();
+            int sideWidth=Math.min(dp(290),(int)(getResources().getDisplayMetrics().widthPixels*.43f));
+            if(preferences.getBoolean("player-side-right",false)){
+                frame.addView(root,new LinearLayout.LayoutParams(0,-1,1));
+                frame.addView(side,new LinearLayout.LayoutParams(sideWidth,-1));
+            }else{
+                frame.addView(side,new LinearLayout.LayoutParams(sideWidth,-1));
+                frame.addView(root,new LinearLayout.LayoutParams(0,-1,1));
+            }
+            setContentView(frame);
+        }else setContentView(root);
         if(correctionMode){Button exit=button("Exit correction mode",this::exitCorrectionMode,true);
             LinearLayout top=column();top.setGravity(Gravity.RIGHT);top.setBackground(shape(surface(),18));
             LinearLayout.LayoutParams ep=new LinearLayout.LayoutParams(-2,dp(56));ep.setMargins(0,0,dp(12),0);top.addView(exit,ep);
@@ -189,7 +204,7 @@ public final class MainActivity extends Activity {
         TextView sub=text(subtitle,12,muted(),false);pad(sub,20,3,20,13);add(root,sub);
         ScrollView scroll=new ScrollView(this);currentScroll=scroll;scroll.setFillViewport(true);scroll.setVerticalScrollBarEnabled(false);body=column();scroll.addView(body);
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        if(audioController!=null&&audioController.track()!=null)showMiniAudio();
+        if(audioController!=null&&audioController.track()!=null&&!landscapePlayer)showMiniAudio();
         bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER);bar.setBackgroundColor(bg());pad(bar,7,8,7,8);
         navExpandedHeight=dp(elderMode?74:68);
         if(!page.equals("Reader"))dockNavShown=true;
@@ -315,6 +330,77 @@ public final class MainActivity extends Activity {
         LinearLayout move=card(body);LinearLayout buttons=new LinearLayout(this);add(move,buttons);
         Button previous=button("‹ Previous",()->showReader(selected-1),false);previous.setEnabled(selected>0);buttons.addView(previous,new LinearLayout.LayoutParams(0,dp(48),1));
         Button next=button("Next ›",()->showReader(selected+1),true);next.setEnabled(selected<verses.size()-1);buttons.addView(next,new LinearLayout.LayoutParams(0,dp(48),1));
+        Button jump=button("↗",this::showJumpSelector,false);jump.setContentDescription("Jump to a pasuram");
+        buttons.addView(jump,new LinearLayout.LayoutParams(dp(50),dp(48)));
+    }
+    private void showJumpSelector(){
+        LinearLayout fields=column();pad(fields,20,8,20,5);
+        add(fields,text("Prabandham",13,fg(),true));
+        ArrayList<String> names=new ArrayList<>();
+        for(int i=0;i<books.length();i++)names.add(books.optJSONObject(i).optString("name","Book "+(i+1)));
+        Spinner pick=new Spinner(this);ArrayAdapter<String> adapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,names);
+        pick.setAdapter(adapter);pick.setSelection(bookIndex);add(fields,pick);
+        add(fields,text("Pasuram in this prabandham (1–end)",13,fg(),true));
+        EditText number=new EditText(this);number.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        number.setSingleLine(true);number.setText(String.valueOf(selected+1));number.setSelectAllOnFocus(true);
+        add(fields,number);
+        pick.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            public void onNothingSelected(android.widget.AdapterView<?> parent){}
+            public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
+                if(position!=bookIndex)number.setText("1");
+                JSONObject meta=books.optJSONObject(position);int count=meta==null?1:meta.optInt("end")-meta.optInt("start")+1;
+                if(position==21||position==22)count=1;
+                number.setHint("1–"+count);
+            }
+        });
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Jump to pasuram").setView(fields)
+            .setNegativeButton("Cancel",null).setPositiveButton("Go",null).create();
+        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view->{
+            int targetBook=pick.getSelectedItemPosition();JSONObject meta=books.optJSONObject(targetBook);
+            if(meta==null)return;
+            int count=meta.optInt("end")-meta.optInt("start")+1;
+            if(targetBook==21||targetBook==22)count=1;
+            int wanted;try{wanted=Integer.parseInt(number.getText().toString().trim());}
+            catch(Exception ex){number.setError("Enter a pasuram number");return;}
+            if(wanted<1||wanted>count){number.setError("Choose 1–"+count);return;}
+            if(targetBook!=bookIndex){loadBook(targetBook);preferences.edit().putInt("book",targetBook).apply();}
+            dialog.dismiss();showReader(wanted-1);
+        }));
+        dialog.show();
+    }
+    private LinearLayout buildLandscapePlayer(){
+        LinearLayout side=column();side.setBackground(shape(surface(),theme==1?8:16));pad(side,10,6,10,6);
+        TextView header=text("NOW PLAYING",11,ac(),true);add(side,header);
+        audioTitle=text("",15,fg(),true);audioTitle.setMaxLines(2);add(side,audioTitle);
+        audioStatus=text("",11,muted(),false);add(side,audioStatus);
+        audioTime=text("",12,fg(),false);add(side,audioTime);
+        audioSeek=new SeekBar(this);audioSeek.setMax(1000);add(side,audioSeek);
+        audioSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+            public void onStartTrackingTouch(SeekBar seek){audioSeekDragging=true;}
+            public void onStopTrackingTouch(SeekBar seek){audioSeekDragging=false;audioController.seek(audioController.duration()*seek.getProgress()/1000L);}
+            public void onProgressChanged(SeekBar seek,int progress,boolean user){}
+        });
+        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(false);
+        LinearLayout stack=column();scroll.addView(stack);side.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        audioToggle=button("Play",audioController::toggle,true);add(stack,audioToggle);
+        add(stack,button("‹ Previous recording",audioController::previous,false));
+        add(stack,button("Next recording ›",audioController::next,false));
+        audioLoop=button("Repeat track",audioController::one,false);add(stack,audioLoop);
+        audioGroupLoop=button("Repeat group",audioController::group,false);add(stack,audioGroupLoop);
+        audioAB=button("Set A",()->{if(audioController.markA()<0)audioController.setA();else if(audioController.markB()<0)audioController.setB();else audioController.clearAB();},false);
+        add(stack,audioAB);add(stack,button("Save offline",audioController::download,false));
+        for(float rate:new float[]{.75f,1f,1.25f}){
+            Button chip=button(String.format(java.util.Locale.ROOT,"%.2f× · hold for dial",rate),()->audioController.speed(rate),false);
+            add(stack,chip);chip.setOnLongClickListener(v->{audioController.speed(rate);
+                new AlertDialog.Builder(this).setTitle("Precise speed")
+                    .setView(new SpeedDial(this,rate,audioController::speed)).setPositiveButton("Done",null).show();return true;});
+        }
+        add(stack,button("More speeds and controls",this::showPlayerSheet,false));
+        boolean right=preferences.getBoolean("player-side-right",false);
+        add(side,button(right?"Move player left":"Move player right",()->{
+            preferences.edit().putBoolean("player-side-right",!right).apply();showCurrentPage();
+        },false));
+        updateAudioControls();return side;
     }
     private String audioClock(int milliseconds){int seconds=Math.max(0,milliseconds/1000);
         return String.format(java.util.Locale.ROOT,"%d:%02d",seconds/60,seconds%60);}
@@ -769,6 +855,12 @@ public final class MainActivity extends Activity {
     }
     private void showNotice(String tab){page=tab;start(tab,"Coming after the core reader",""+tab);
         add(card(body),text("The "+tab.toLowerCase(Locale.ROOT)+" screens are coming in a later update. Reading works offline.",15,fg(),false));
+    }
+    @Override public void onConfigurationChanged(android.content.res.Configuration configuration){
+        super.onConfigurationChanged(configuration);
+        // Keep the Activity-owned MediaPlayer alive across rotation.
+        if(audioSheet!=null){audioSheet.dismiss();audioSheet=null;}
+        showCurrentPage();
     }
     @Override protected void onDestroy(){if(Build.VERSION.SDK_INT>=33&&systemBackCallback!=null)
             getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(systemBackCallback);
