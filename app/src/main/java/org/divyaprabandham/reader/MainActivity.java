@@ -9,6 +9,9 @@ import android.graphics.BitmapFactory;
 import android.util.Base64;
 import android.widget.Spinner;
 import android.widget.SeekBar;
+import android.animation.ValueAnimator;
+import android.app.Dialog;
+import android.view.WindowManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.ArrayAdapter;
@@ -59,7 +62,12 @@ public final class MainActivity extends Activity {
     private ContentUpdates contentUpdates;
     private AudioCatalog audioCatalog;
     private AudioController audioController;
-    private TextView audioTitle,audioTime,audioStatus,miniAudioTitle;
+    private TextView audioTitle,audioTime,audioStatus,miniAudioTitle,miniAudioTime;
+    private SeekBar miniAudioSeek;
+    private boolean miniAudioSeekDragging=false;
+    private Dialog audioSheet;
+    private boolean dockNavShown=true;
+    private int navExpandedHeight=0;
     private Button audioToggle,audioLoop,audioGroupLoop,audioAB,miniAudioToggle;
     private SeekBar audioSeek;
     private boolean audioSeekDragging;
@@ -155,7 +163,7 @@ public final class MainActivity extends Activity {
     private void start(String title,String subtitle,String active){
         getWindow().setStatusBarColor(bg());getWindow().setNavigationBarColor(bg());
         getWindow().getDecorView().setSystemUiVisibility(theme==1||theme==2?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0);
-        audioTitle=null;audioTime=null;audioStatus=null;audioToggle=null;audioLoop=null;audioGroupLoop=null;audioAB=null;audioSeek=null;miniAudioTitle=null;miniAudioToggle=null;
+        audioTitle=null;audioTime=null;audioStatus=null;audioToggle=null;audioLoop=null;audioGroupLoop=null;audioAB=null;audioSeek=null;miniAudioTitle=null;miniAudioTime=null;miniAudioSeek=null;miniAudioToggle=null;
         root=column();root.setBackgroundColor(bg());
         root.setOnApplyWindowInsetsListener((v,insets)->{
             // Android 15+ enforces edge-to-edge at this target SDK; older releases lay out below bars.
@@ -182,11 +190,29 @@ public final class MainActivity extends Activity {
         ScrollView scroll=new ScrollView(this);currentScroll=scroll;scroll.setFillViewport(true);scroll.setVerticalScrollBarEnabled(false);body=column();scroll.addView(body);
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         if(audioController!=null&&audioController.track()!=null)showMiniAudio();
-        bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER);bar.setBackgroundColor(bg());pad(bar,7,8,7,8);add(root,bar);
+        bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER);bar.setBackgroundColor(bg());pad(bar,7,8,7,8);
+        navExpandedHeight=dp(elderMode?74:68);
+        if(!page.equals("Reader"))dockNavShown=true;
+        root.addView(bar,new LinearLayout.LayoutParams(-1,dockNavShown?navExpandedHeight:0));
+        scroll.setOnScrollChangeListener((View v,int x,int y,int oldX,int oldY)->{
+            if(audioController==null||audioController.track()==null)return;
+            int delta=y-oldY;
+            if(Math.abs(delta)<dp(5))return;
+            setDockNavShown(delta<0);
+        });
         String[] tabs={"Home","Recite","Learn","Explore","Search"};for(String tab:tabs){
             TextView link=text(tab,11,active.equals(tab)?ac():muted(),active.equals(tab));link.setGravity(Gravity.CENTER);link.setMinimumHeight(dp(elderMode?56:48));
             bar.addView(link,new LinearLayout.LayoutParams(0,dp(elderMode?58:52),1));link.setOnClickListener(v->{switch(tab){case "Home":showHome();break;case "Search":showSearch();break;case "Recite":showBooks();break;default:showNotice(tab);}});
         }
+    }
+    private void setDockNavShown(boolean visible){
+        if(bar==null||dockNavShown==visible)return;
+        dockNavShown=visible;
+        int from=bar.getLayoutParams().height,to=visible?navExpandedHeight:0;
+        ValueAnimator animator=ValueAnimator.ofInt(from,to);animator.setDuration(180);
+        animator.addUpdateListener(a->{if(bar==null)return;android.view.ViewGroup.LayoutParams params=bar.getLayoutParams();
+            params.height=(int)a.getAnimatedValue();bar.setLayoutParams(params);});
+        animator.start();
     }
     private void showHome(){page="Home";start("Divya Prabandham","Available offline · 25 prabandhams","Home");
         if(ContentUpdates.configured()){
@@ -297,7 +323,9 @@ public final class MainActivity extends Activity {
         AudioCatalog.Track track=audioController.track();
         if(audioTitle!=null)audioTitle.setText(track==null?"Audio":track.title+" · "+(audioController.queueIndex()+1)+"/"+audioController.queueSize());
         if(miniAudioTitle!=null)miniAudioTitle.setText(track==null?"Audio":track.title);
-        if(miniAudioToggle!=null)miniAudioToggle.setText(audioController.playing()?"Pause":"Play");
+        if(miniAudioToggle!=null)miniAudioToggle.setText(audioController.playing()?"Ⅱ":"▶");
+        if(miniAudioTime!=null)miniAudioTime.setText(audioClock(audioController.position())+" / "+audioClock(audioController.duration()));
+        if(miniAudioSeek!=null&&!miniAudioSeekDragging){int duration=audioController.duration();miniAudioSeek.setProgress(duration>0?(int)(1000L*audioController.position()/duration):0);}
         if(audioToggle!=null)audioToggle.setText(audioController.playing()?"Pause":"Play");
         if(audioLoop!=null)audioLoop.setText(audioController.repeatOne()?"Repeat track ✓":"Repeat track");
         if(audioGroupLoop!=null)audioGroupLoop.setText(audioController.repeatGroup()?"Repeat group ✓":"Repeat group");
@@ -307,11 +335,79 @@ public final class MainActivity extends Activity {
         if(audioStatus!=null)audioStatus.setText(audioController.error().isEmpty()?audioController.cached()?"Saved offline":"Streaming · save for offline use":audioController.error());
     }
     private void showMiniAudio(){
-        LinearLayout mini=new LinearLayout(this);mini.setGravity(Gravity.CENTER_VERTICAL);mini.setBackgroundColor(surface());pad(mini,12,5,12,5);
-        miniAudioTitle=text(audioController.track().title,12,fg(),true);mini.addView(miniAudioTitle,new LinearLayout.LayoutParams(0,dp(48),1));
-        miniAudioToggle=button(audioController.playing()?"Pause":"Play",audioController::toggle,false);
-        mini.addView(miniAudioToggle,new LinearLayout.LayoutParams(dp(90),dp(46)));
-        root.addView(mini,new LinearLayout.LayoutParams(-1,dp(58)));
+        // This dock is outside the scrolling reader, always in reach on every tab.
+        LinearLayout dock=column();dock.setBackground(shape(surface(),theme==1?8:16));
+        LinearLayout.LayoutParams dockParams=new LinearLayout.LayoutParams(-1,dp(94));
+        dockParams.setMargins(dp(8),dp(2),dp(8),dp(2));root.addView(dock,dockParams);
+        LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);pad(row,12,3,8,0);add(dock,row);
+        TextView icon=text("♫",24,ac(),true);icon.setGravity(Gravity.CENTER);
+        row.addView(icon,new LinearLayout.LayoutParams(dp(38),dp(50)));
+        LinearLayout info=column();pad(info,5,0,0,0);row.addView(info,new LinearLayout.LayoutParams(0,dp(50),1));
+        miniAudioTitle=text(audioController.track().title,14,fg(),true);miniAudioTitle.setSingleLine(true);
+        miniAudioTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);add(info,miniAudioTitle);
+        miniAudioTime=text("",11,muted(),false);add(info,miniAudioTime);
+        info.setOnClickListener(v->showPlayerSheet());icon.setOnClickListener(v->showPlayerSheet());
+        TextView expand=text("⌃",22,ac(),true);expand.setGravity(Gravity.CENTER);
+        expand.setContentDescription("Open audio controls");row.addView(expand,new LinearLayout.LayoutParams(dp(42),dp(48)));
+        expand.setOnClickListener(v->showPlayerSheet());
+        miniAudioToggle=button("▶",audioController::toggle,true);
+        miniAudioToggle.setContentDescription("Play or pause audio");
+        row.addView(miniAudioToggle,new LinearLayout.LayoutParams(dp(46),dp(46)));
+        miniAudioSeek=new SeekBar(this);miniAudioSeek.setMax(1000);miniAudioSeek.setPadding(dp(8),0,dp(8),0);
+        dock.addView(miniAudioSeek,new LinearLayout.LayoutParams(-1,dp(36)));
+        miniAudioSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+            public void onStartTrackingTouch(SeekBar seek){miniAudioSeekDragging=true;}
+            public void onStopTrackingTouch(SeekBar seek){miniAudioSeekDragging=false;audioController.seek(audioController.duration()*seek.getProgress()/1000L);}
+            public void onProgressChanged(SeekBar seek,int progress,boolean user){}
+        });
+        updateAudioControls();
+    }
+    private void showPlayerSheet(){
+        if(audioController==null||audioController.track()==null)return;
+        if(audioSheet!=null&&audioSheet.isShowing())return;
+        audioSheet=new Dialog(this);audioSheet.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout panel=column();panel.setBackground(shape(surface(),theme==1?8:22));pad(panel,16,10,16,18);
+        TextView header=text("LISTEN  ·  DRAG TO SEEK",11,ac(),true);add(panel,header);
+        audioTitle=text("",18,fg(),true);pad(audioTitle,0,8,0,3);add(panel,audioTitle);
+        audioStatus=text("",12,muted(),false);add(panel,audioStatus);
+        audioTime=text("",12,fg(),false);pad(audioTime,0,8,0,0);add(panel,audioTime);
+        audioSeek=new SeekBar(this);audioSeek.setMax(1000);add(panel,audioSeek);
+        audioSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+            public void onStartTrackingTouch(SeekBar seek){audioSeekDragging=true;}
+            public void onStopTrackingTouch(SeekBar seek){audioSeekDragging=false;audioController.seek(audioController.duration()*seek.getProgress()/1000L);}
+            public void onProgressChanged(SeekBar seek,int progress,boolean user){}
+        });
+        LinearLayout transport=new LinearLayout(this);add(panel,transport);
+        transport.addView(button("‹",audioController::previous,false),new LinearLayout.LayoutParams(0,dp(48),1));
+        audioToggle=button("Play",audioController::toggle,true);transport.addView(audioToggle,new LinearLayout.LayoutParams(0,dp(48),2));
+        transport.addView(button("›",audioController::next,false),new LinearLayout.LayoutParams(0,dp(48),1));
+        LinearLayout looping=new LinearLayout(this);add(panel,looping);
+        audioLoop=button("Repeat track",audioController::one,false);looping.addView(audioLoop,new LinearLayout.LayoutParams(0,dp(48),1));
+        audioGroupLoop=button("Repeat group",audioController::group,false);looping.addView(audioGroupLoop,new LinearLayout.LayoutParams(0,dp(48),1));
+        LinearLayout ab=new LinearLayout(this);add(panel,ab);
+        audioAB=button("Set A",()->{if(audioController.markA()<0)audioController.setA();else if(audioController.markB()<0)audioController.setB();else audioController.clearAB();},false);
+        ab.addView(audioAB,new LinearLayout.LayoutParams(0,dp(48),1));
+        ab.addView(button("Save offline",audioController::download,false),new LinearLayout.LayoutParams(0,dp(48),1));
+        add(panel,text("Hold a speed for the precise dial",11,muted(),false));
+        LinearLayout rates=new LinearLayout(this);add(panel,rates);
+        for(float rate:new float[]{.5f,.75f,1f,1.25f,1.5f}){
+            Button chip=button(String.format(java.util.Locale.ROOT,"%.2f×",rate),()->audioController.speed(rate),false);
+            rates.addView(chip,new LinearLayout.LayoutParams(0,dp(48),1));
+            chip.setOnLongClickListener(view->{audioController.speed(rate);SpeedDial dial=new SpeedDial(this,rate,audioController::speed);
+                new AlertDialog.Builder(this).setTitle("Precise speed").setView(dial).setPositiveButton("Done",null).show();return true;});
+        }
+        if(audioController.queueSize()>1)add(panel,text("Repeat group loops the sequence. Save offline stores the current recording only.",11,muted(),false));
+        ScrollView content=new ScrollView(this);content.setFillViewport(false);content.addView(panel);
+        audioSheet.setContentView(content);
+        Window window=audioSheet.getWindow();if(window!=null){window.setBackgroundDrawableResource(android.R.color.transparent);
+            window.setGravity(Gravity.BOTTOM);window.setLayout(-1,Math.min(dp(530),(int)(getResources().getDisplayMetrics().heightPixels*.74f)));
+            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            WindowManager.LayoutParams p=window.getAttributes();p.dimAmount=.28f;window.setAttributes(p);}
+        audioSheet.setOnDismissListener(d->{audioSheet=null;audioTitle=null;audioStatus=null;audioTime=null;audioSeek=null;
+            audioToggle=null;audioLoop=null;audioGroupLoop=null;audioAB=null;});
+        audioSheet.show();
+        if(window!=null)window.setLayout(-1,Math.min(dp(530),(int)(getResources().getDisplayMetrics().heightPixels*.74f)));
+        updateAudioControls();
     }
     private void showCurrentPage(){switch(page){case "Reader":showReader(selected);break;case "Home":showHome();break;case "Books":showBooks();break;case "ContentSettings":showContentSettings();break;default:break;}}
     private void playAudio(ArrayList<AudioCatalog.Track> tracks,int start){
@@ -338,39 +434,6 @@ public final class MainActivity extends Activity {
         }
         if(individual==null&&recordings.isEmpty())add(panel,text("No verified recording is mapped to this passage yet.",12,muted(),false));
         if(bookIndex==21||bookIndex==22)add(panel,text("This madal is one continuous passage. There are no published per-line audio boundaries.",12,muted(),false));
-        if(audioController.track()!=null){
-            add(panel,text("Now playing controls",14,fg(),true));
-            audioTitle=text("",14,fg(),true);add(panel,audioTitle);
-            audioStatus=text("",12,muted(),false);add(panel,audioStatus);
-            audioTime=text("",12,fg(),false);add(panel,audioTime);
-            audioSeek=new SeekBar(this);audioSeek.setMax(1000);add(panel,audioSeek);
-            audioSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
-                public void onStartTrackingTouch(SeekBar seek){audioSeekDragging=true;}
-                public void onStopTrackingTouch(SeekBar seek){audioSeekDragging=false;audioController.seek(audioController.duration()*seek.getProgress()/1000L);}
-                public void onProgressChanged(SeekBar seek,int progress,boolean user){}
-            });
-            LinearLayout transport=new LinearLayout(this);add(panel,transport);
-            transport.addView(button("‹",audioController::previous,false),new LinearLayout.LayoutParams(0,dp(48),1));
-            audioToggle=button("Play",audioController::toggle,true);transport.addView(audioToggle,new LinearLayout.LayoutParams(0,dp(48),2));
-            transport.addView(button("›",audioController::next,false),new LinearLayout.LayoutParams(0,dp(48),1));
-            LinearLayout looping=new LinearLayout(this);add(panel,looping);
-            audioLoop=button("Repeat track",audioController::one,false);looping.addView(audioLoop,new LinearLayout.LayoutParams(0,dp(48),1));
-            audioGroupLoop=button("Repeat group",audioController::group,false);looping.addView(audioGroupLoop,new LinearLayout.LayoutParams(0,dp(48),1));
-            LinearLayout ab=new LinearLayout(this);add(panel,ab);
-            audioAB=button("Set A",()->{if(audioController.markA()<0)audioController.setA();else if(audioController.markB()<0)audioController.setB();else audioController.clearAB();},false);
-            ab.addView(audioAB,new LinearLayout.LayoutParams(0,dp(48),1));
-            ab.addView(button("Save offline",audioController::download,false),new LinearLayout.LayoutParams(0,dp(48),1));
-            if(audioController.queueSize()>1)add(panel,text("This group plays in sequence. Repeat group loops the whole set; Save offline saves the current track only.",12,muted(),false));
-            add(panel,text("Tap a speed for quick change. Hold it for the precise dial.",12,muted(),false));
-            LinearLayout rates=new LinearLayout(this);add(panel,rates);
-            for(float rate:new float[]{.5f,.75f,1f,1.25f,1.5f}){
-                Button chip=button(String.format(java.util.Locale.ROOT,"%.2f×",rate),()->audioController.speed(rate),false);
-                rates.addView(chip,new LinearLayout.LayoutParams(0,dp(48),1));
-                chip.setOnLongClickListener(view->{audioController.speed(rate);SpeedDial dial=new SpeedDial(this,rate,audioController::speed);
-                    new AlertDialog.Builder(this).setTitle("Precise speed").setView(dial).setPositiveButton("Done",null).show();return true;});
-            }
-            updateAudioControls();
-        }
     }
     private void enterCorrectionMode(){
         new AlertDialog.Builder(this).setTitle("Correction mode")
