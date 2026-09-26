@@ -329,9 +329,9 @@ public final class MainActivity extends Activity {
         thumb.setBackground(shape(ac(),14));
         FrameLayout.LayoutParams thumbParams=new FrameLayout.LayoutParams(dp(34),dp(38),Gravity.RIGHT|Gravity.TOP);
         thumbParams.rightMargin=dp(1);rail.addView(thumb,thumbParams);
-        TextView bubble=text(String.valueOf(verses.get(0).number),16,0xffffffff,true);
-        bubble.setGravity(Gravity.CENTER);bubble.setBackground(shape(ac(),16));bubble.setVisibility(View.GONE);
-        FrameLayout.LayoutParams bubbleParams=new FrameLayout.LayoutParams(dp(76),dp(44),Gravity.RIGHT|Gravity.TOP);
+        TextView bubble=text(String.valueOf(verses.get(0).number),13,0xffffffff,true);
+        bubble.setGravity(Gravity.CENTER);bubble.setBackground(shape(ac(),11));bubble.setVisibility(View.GONE);
+        FrameLayout.LayoutParams bubbleParams=new FrameLayout.LayoutParams(dp(56),dp(32),Gravity.RIGHT|Gravity.TOP);
         bubbleParams.rightMargin=dp(47);frame.addView(bubble,bubbleParams);
         Runnable update=()->{int h=rail.getHeight()-dp(38),position=list.getFirstVisiblePosition();
             if(h>0){float fraction=position/(float)Math.max(1,verses.size()-1);
