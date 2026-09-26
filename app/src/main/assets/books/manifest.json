@@ -258,9 +258,9 @@
     "alvar": "Thirumangai Azhvar",
     "start": 2673,
     "end": 2712,
-    "rows": 1,
-    "sha256": "3ce754d8b7d5c7af65176fec226cd2c97bf189e5bcb21b7bf7b59a5def9117d4",
-    "bytes": 25384,
+    "rows": 40,
+    "sha256": "618fff3fec4188b298101653f5e65189ca471d58ad4938f9ae0a148f1ce5ea68",
+    "bytes": 26642,
     "file": "22-siriya-thirumadal-QRYRLO25.json"
   },
   {
@@ -270,9 +270,9 @@
     "alvar": "Thirumangai Azhvar",
     "start": 2713,
     "end": 2790,
-    "rows": 1,
-    "sha256": "47ce3e61b2c492f80aa165242398761f0f44041c212e95177fcb101b97d5f75f",
-    "bytes": 49440,
+    "rows": 78,
+    "sha256": "150307fc90a1fcfa7fd9af26e7ed25ad7b36c3b4757cc2059b6dc9f12f32e90b",
+    "bytes": 51920,
     "file": "23-periya-thirumadal-PCHQELOE.json"
   },
   {

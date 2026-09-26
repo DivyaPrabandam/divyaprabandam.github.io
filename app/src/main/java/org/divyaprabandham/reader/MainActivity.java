@@ -92,6 +92,7 @@ public final class MainActivity extends Activity {
     private void setBookmark(int n,boolean value){preferences.edit().putBoolean("saved-"+n,value).apply();}
 
     private boolean transliteration=false;
+    private String madalEpilogueTamil="",madalEpilogueLatin="";
     private boolean isRead(int n){return preferences.getBoolean("read-"+n,false);}
     private void markRead(int n,boolean value){preferences.edit().putBoolean("read-"+n,value).apply();}
     private int readCount(){int count=0;for(int n=1;n<=4000;n++)if(isRead(n))count++;return count;}
@@ -142,13 +143,13 @@ public final class MainActivity extends Activity {
         ArrayList<Verse> parsed=new ArrayList<>();JSONArray sections=data.getJSONArray("sections");
         for(int s=0;s<sections.length();s++){JSONArray ps=sections.getJSONObject(s).getJSONArray("p");for(int i=0;i<ps.length();i++){
             JSONArray row=ps.getJSONArray(i);String tamil=join(row.getJSONArray(3)),latin=join(row.getJSONArray(2)),audio=row.optString(5,"");
-            int first=row.getInt(0),last=row.getInt(1);if(last>first){
-                // The site's madals are long single rows that represent numbered line ranges.
-                // Preserve the full source as one passage; do not invent split boundaries.
-                parsed.add(new Verse(first,tamil,latin,audio));
-            }else parsed.add(new Verse(first,tamil,latin,audio));
+            int first=row.getInt(0),last=row.getInt(1);
+            parsed.add(new Verse(first,tamil,latin,audio));
         }}
         verses.clear();verses.addAll(parsed);bookIndex=which;bookName=data.getString("name");bookAlvar=data.getString("alvar");bookTamil=data.getString("nameTa");
+        JSONObject epilogue=sections.getJSONObject(0).optJSONObject("epilogue");
+        madalEpilogueTamil=epilogue==null?"":join(epilogue.getJSONArray("ta"));
+        madalEpilogueLatin=epilogue==null?"":join(epilogue.getJSONArray("le"));
     }catch(Exception e){throw new IllegalStateException("Bundled text missing or unreadable",e);}}
     private static String join(JSONArray lines)throws Exception{StringBuilder b=new StringBuilder();for(int i=0;i<lines.length();i++){if(i>0)b.append('\n');b.append(lines.getString(i));}return b.toString();}
     private int bg(){return PALETTE[theme][0];} private int fg(){return PALETTE[theme][1];} private int ac(){return PALETTE[theme][2];} private int surface(){return PALETTE[theme][3];} private int muted(){return PALETTE[theme][4];}
@@ -235,16 +236,6 @@ public final class MainActivity extends Activity {
         animator.start();
     }
     private void showHome(){page="Home";start("Divya Prabandham","Available offline · 25 prabandhams","Home");
-        if(ContentUpdates.configured()){
-            try{int version=contentUpdates.activeVersion();LinearLayout status=card(body);
-                add(status,text(version>0?"Reading text · verified update "+version:"Reading text · offline edition",13,fg(),true));
-            }catch(Exception ex){android.util.Log.w("ContentUpdates","Status unavailable",ex);}
-        }
-        String gate=ContentUpdates.configured()?getSharedPreferences("content-settings",MODE_PRIVATE).getString("update-required",null):null;
-        if(gate!=null){LinearLayout warning=card(body);add(warning,text("App update required for new content",16,ac(),true));
-            add(warning,text("You can keep reading the saved offline edition. New content needs a newer app version.",13,fg(),false));
-            add(warning,button("Update app",this::showAppUpdate,false));}
-        add(card(body),button("Content settings",this::showContentSettings,false));
         TextView invocation=text("ஸ்ரீ:",24,ac(),true);invocation.setGravity(Gravity.CENTER);pad(invocation,0,20,0,10);add(body,invocation);
         LinearLayout box=card(body);add(box,text("CONTINUE READING",11,ac(),true));
         Verse verse=verses.get(selected);TextView line=text(verse.opening(),20,fg(),false);pad(line,0,12,0,12);add(box,line);
@@ -253,28 +244,6 @@ public final class MainActivity extends Activity {
         LinearLayout b=card(body);add(b,text(bookName,21,fg(),true));add(b,text(bookTamil+" · "+bookAlvar+" · "+passageCountLabel(),13,muted(),false));
         add(b,button("Continue in "+bookName,this::showIndex,false));
         add(card(body),button("Browse all 25 prabandhams",this::showBooks,true));
-        LinearLayout quick=card(body);add(quick,text("YOUR LIBRARY",11,ac(),true));
-        LinearLayout first=new LinearLayout(this);add(quick,first);
-        Button journey=button("Journey\n"+readCount()+" marked",this::showJourney,false);
-        first.addView(journey,new LinearLayout.LayoutParams(0,dp(58),1));
-        Button saved=button("☆ Saved",this::showSaved,false);
-        first.addView(saved,new LinearLayout.LayoutParams(0,dp(58),1));
-        LinearLayout second=new LinearLayout(this);add(quick,second);
-        Button reports=button("Reports",this::showCorrectionReports,false);
-        second.addView(reports,new LinearLayout.LayoutParams(0,dp(58),1));
-        Button corrections=button(correctionMode?"Exit correction":"Correction mode",()->{
-            if(correctionMode)exitCorrectionMode();else enterCorrectionMode();
-        },correctionMode);
-        second.addView(corrections,new LinearLayout.LayoutParams(0,dp(58),1));
-        LinearLayout themes=card(body);add(themes,text("Appearance · same navigation in every theme",14,fg(),true));
-        LinearLayout choices=new LinearLayout(this);pad(choices,0,10,0,0);add(themes,choices);
-        for(int i=0;i<NAMES.length;i++){final int t=i;Button pick=button(NAMES[i],()->{theme=t;preferences.edit().putInt("theme",theme).apply();showHome();},i==theme);
-            pick.setTextSize(10);choices.addView(pick,new LinearLayout.LayoutParams(0,dp(48),1));}
-        add(card(body),button(elderMode?"Elder mode on · turn off":"Elder mode · larger text and controls",()->{
-            elderMode=!elderMode;preferences.edit().putBoolean("elder",elderMode).apply();showHome();
-        },elderMode));
-        add(card(body),text("All 4,000 numbered pasurams are available offline. Recitation can stream or be saved one track at a time.",13,muted(),false));
-        add(card(body),button("All settings",this::showSettings,false));
     }
     private void showBooks(){page="Books";start("The 4,000 pasurams","25 prabandhams · offline","Recite");
         int shown=0;
@@ -295,7 +264,7 @@ public final class MainActivity extends Activity {
     private int madalFirst(){return bookIndex==21?2673:2713;}
     private int madalLast(){return bookIndex==21?2712:2790;}
     private int madalNumberedCount(){return madalLast()-madalFirst()+1;}
-    private String passageCountLabel(){return madalBook()?madalNumberedCount()+" numbered pasurams · 1 continuous source passage":verses.size()+" passages";}
+    private String passageCountLabel(){return madalBook()?madalNumberedCount()+" numbered pasurams":verses.size()+" passages";}
     private int loadedIndexCards=0; private int searchGeneration=0;
     private ScrollView currentScroll;
     private void showIndex(){if(!page.equals("Reader")&&!page.equals("Recite"))indexParent=page;
@@ -304,9 +273,9 @@ public final class MainActivity extends Activity {
     }
     private void appendIndexCards(){int limit=Math.min(loadedIndexCards+35,verses.size());
         for(int i=loadedIndexCards;i<limit;i++){final int index=i;Verse v=verses.get(i);LinearLayout c=card(body);
-            TextView line=text((madalBook()?"Pasurams "+madalFirst()+"–"+madalLast():"Pasuram "+v.number)+"  "+v.opening(),16,fg(),false);
+            TextView line=text("Pasuram "+v.number+"  "+v.opening(),16,fg(),false);
             pad(line,0,1,0,5);add(c,line);
-            add(c,text(madalBook()?madalNumberedCount()+" numbered pasurams · 1 continuous source passage":bookAlvar+" · "+bookName+" "+(i+1),11,muted(),false));
+            add(c,text(bookAlvar+" · "+bookName+" "+(i+1),11,muted(),false));
             c.setOnClickListener(w->showReader(index));c.setMinimumHeight(dp(72));
         }
         loadedIndexCards=limit;
@@ -315,8 +284,8 @@ public final class MainActivity extends Activity {
     }
     private void showReader(int index){if(!page.equals("Reader"))readerParent=page;
         selected=Math.max(0,Math.min(verses.size()-1,index));preferences.edit().putInt("selected",selected).apply();page="Reader";
-        Verse v=verses.get(selected);start(madalBook()?bookName+" · pasurams "+madalFirst()+"–"+madalLast():bookName+" "+(selected+1),
-            bookAlvar+" · "+(madalBook()?passageCountLabel():"pasuram "+v.number+" of 4,000"),"Recite");
+        Verse v=verses.get(selected);start(bookName+" · "+v.number,
+            bookAlvar+" · pasuram "+v.number+" of 4,000","Recite");
         LinearLayout c=card(body);
         LinearLayout verseHeading=new LinearLayout(this);verseHeading.setGravity(Gravity.CENTER_VERTICAL);add(c,verseHeading);
         TextView source=text(bookTamil+" · "+bookAlvar,15,ac(),true);
@@ -332,7 +301,7 @@ public final class MainActivity extends Activity {
                     audioCatalog.groupRange(books.optJSONObject(bookIndex).optString("id"),v.number,books.optJSONObject(bookIndex).optInt("end"))[0]);
                 if(!tracks.isEmpty()){ArrayList<AudioCatalog.Track> single=new ArrayList<>();single.add(tracks.get(0));playAudio(single,0);}
             },true);
-            play.setContentDescription("Play pasuram "+v.number);
+            play.setContentDescription(madalBook()?"Play full madal recording":"Play pasuram "+v.number);
             GradientDrawable circle=shape(ac(),48);play.setBackground(circle);
             verseHeading.addView(play,new LinearLayout.LayoutParams(dp(46),dp(46)));
         }
@@ -353,30 +322,40 @@ public final class MainActivity extends Activity {
                 preferences.edit().putInt("size",textSize).apply();showReader(selected);});
         }
         TextView verse=text(transliteration?v.latin:v.tamil,textSize,fg(),false);verse.setTextSize(textSize+(elderMode?4:0));verse.setLineSpacing(dp(elderMode?12:7),elderMode?1.5f:1.28f);pad(verse,0,22,0,20);add(c,verse);
-        if(bookIndex==21||bookIndex==22)add(c,text("This complete madal is one source passage covering a numbered range; individual verse boundaries are not marked in the site data.",11,muted(),false));
+        if(madalBook()&&selected==verses.size()-1&&!madalEpilogueTamil.isEmpty()){
+            add(c,text("Closing lines · unnumbered",13,ac(),true));
+            add(c,text(transliteration?madalEpilogueLatin:madalEpilogueTamil,textSize,fg(),false));
+        }
         if(!focusMode)
-            add(c,text("Text: bundled verbatim from the site edition · recitation marks kept",11,muted(),false));
+            add(c,text(madalBook()?"Text: canonical site edition, numbered divisions cross-checked with Prapatti · source marks retained":"Text: bundled verbatim from the site edition · recitation marks kept",11,muted(),false));
         if(!focusMode&&audioCatalog!=null&&audioController!=null)addReaderAudio(v);
         if(correctionMode){LinearLayout mode=card(body);add(mode,text("CORRECTION MODE · reading text is unchanged",14,ac(),true));
             add(mode,text("The highlighted correction controls are separate from ordinary reading.",12,muted(),false));}
-        LinearLayout reading=card(body);
-        boolean focused=focusMode;
-        add(reading,button(focused?"Exit focus":"Focus on this pasuram",()->{
+        LinearLayout reading=card(body);pad(reading,9,8,9,8);
+        LinearLayout readingActions=new LinearLayout(this);readingActions.setGravity(Gravity.CENTER);add(reading,readingActions);
+        Button focus=button(focusMode?"● Focus":"● Focus",()->{
             focusMode=!focusMode;showReader(selected);
-        },focused));
-        if(bookIndex==21||bookIndex==22)add(reading,text("For this long madal, marking read applies to the entire source passage, not each number in its range.",11,muted(),false));
-        if(correctionMode)add(reading,button(correctionDrafts.has(v.number)?"Continue correction draft":"Suggest a correction",()->showCorrectionSheet(v),true));
-        add(reading,button(bookmarked(v.number)?"★ Saved · tap to remove":"☆ Save pasuram",()->{
-            setBookmark(v.number,!bookmarked(v.number));showReader(selected);
-        },bookmarked(v.number)));
-        add(reading,button(isRead(v.number)?"✓ Marked read · tap to undo":"Mark as read",()->{
+        },focusMode);focus.setContentDescription(focusMode?"Exit focus mode":"Focus on this pasuram");focus.setTextSize(11);
+        readingActions.addView(focus,new LinearLayout.LayoutParams(0,dp(46),1));
+        Button mark=button(isRead(v.number)?"✓ Read":"Mark as read",()->{
             boolean now=!isRead(v.number);markRead(v.number,now);showReader(selected);
-        },isRead(v.number)));
-        LinearLayout controls=card(body);add(controls,button(transliteration?"தமிழ்":"English transliteration",()->{transliteration=!transliteration;preferences.edit().putBoolean("transliteration",transliteration).apply();showReader(selected);},false));
-        LinearLayout size=new LinearLayout(this);size.setGravity(Gravity.CENTER_VERTICAL);pad(size,0,9,0,0);add(controls,size);
-        TextView sizeLabel=text("Text size",13,fg(),false);size.addView(sizeLabel,new LinearLayout.LayoutParams(0,-2,1));
-        size.addView(button("A−",()->{textSize=Math.max(16,textSize-2);preferences.edit().putInt("size",textSize).apply();showReader(selected);},false));
-        size.addView(button("A+",()->{textSize=Math.min(34,textSize+2);preferences.edit().putInt("size",textSize).apply();showReader(selected);},false));
+        },isRead(v.number));mark.setContentDescription(isRead(v.number)?"Undo mark as read":"Mark pasuram as read");mark.setTextSize(11);
+        readingActions.addView(mark,new LinearLayout.LayoutParams(0,dp(46),1));
+        Button save=button(bookmarked(v.number)?"★ Saved":"☆ Save",()->{
+            setBookmark(v.number,!bookmarked(v.number));showReader(selected);
+        },bookmarked(v.number));save.setContentDescription(bookmarked(v.number)?"Remove saved pasuram":"Save pasuram");save.setTextSize(11);
+        readingActions.addView(save,new LinearLayout.LayoutParams(0,dp(46),1));
+        if(correctionMode)add(card(body),button(correctionDrafts.has(v.number)?"Continue correction draft":"Suggest a correction",()->showCorrectionSheet(v),true));
+        LinearLayout controls=card(body);pad(controls,9,8,9,8);
+        add(controls,button(transliteration?"தமிழ்":"English transliteration",()->{
+            transliteration=!transliteration;preferences.edit().putBoolean("transliteration",transliteration).apply();showReader(selected);
+        },false));
+        LinearLayout size=new LinearLayout(this);size.setGravity(Gravity.CENTER_VERTICAL);add(controls,size);
+        TextView sizeLabel=text("Text size",12,fg(),false);size.addView(sizeLabel,new LinearLayout.LayoutParams(0,-2,1));
+        Button smallerSize=button("A−",()->{textSize=Math.max(16,textSize-2);preferences.edit().putInt("size",textSize).apply();showReader(selected);},false);
+        size.addView(smallerSize,new LinearLayout.LayoutParams(dp(52),dp(43)));
+        Button largerSize=button("A+",()->{textSize=Math.min(34,textSize+2);preferences.edit().putInt("size",textSize).apply();showReader(selected);},false);
+        size.addView(largerSize,new LinearLayout.LayoutParams(dp(52),dp(43)));
         LinearLayout move=card(body);LinearLayout buttons=new LinearLayout(this);add(move,buttons);
         Button previous=button("‹ Previous",()->showReader(selected-1),false);previous.setEnabled(selected>0);buttons.addView(previous,new LinearLayout.LayoutParams(0,dp(48),1));
         Button next=button("Next ›",()->showReader(selected+1),true);next.setEnabled(selected<verses.size()-1);buttons.addView(next,new LinearLayout.LayoutParams(0,dp(48),1));
@@ -399,7 +378,6 @@ public final class MainActivity extends Activity {
             public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
                 if(position!=bookIndex)number.setText("1");
                 JSONObject meta=books.optJSONObject(position);int count=meta==null?1:meta.optInt("end")-meta.optInt("start")+1;
-                if(position==21||position==22)count=1;
                 number.setHint("1–"+count);
             }
         });
@@ -409,7 +387,6 @@ public final class MainActivity extends Activity {
             int targetBook=pick.getSelectedItemPosition();JSONObject meta=books.optJSONObject(targetBook);
             if(meta==null)return;
             int count=meta.optInt("end")-meta.optInt("start")+1;
-            if(targetBook==21||targetBook==22)count=1;
             int wanted;try{wanted=Integer.parseInt(number.getText().toString().trim());}
             catch(Exception ex){number.setError("Enter a pasuram number");return;}
             if(wanted<1||wanted>count){number.setError("Choose 1–"+count);return;}
@@ -564,7 +541,7 @@ public final class MainActivity extends Activity {
         audioController.play(tracks,start);showCurrentPage();
     }
     private void addReaderAudio(Verse currentVerse){
-        LinearLayout panel=card(body);
+        LinearLayout panel=card(body);pad(panel,9,8,9,8);
         AudioCatalog.Track individual=audioCatalog.verse(currentVerse.number);
         String bookId=books.optJSONObject(bookIndex).optString("id");
         int[] range=audioCatalog.groupRange(bookId,currentVerse.number,books.optJSONObject(bookIndex).optInt("end"));
@@ -580,14 +557,14 @@ public final class MainActivity extends Activity {
                 playAudio(group,from);audioController.repeatGroupOn();
             },false);
             groupPlay.setContentDescription("Play group "+range[0]+" to "+range[1]+" as "+group.size()+" separate tracks");
-            options.addView(groupPlay,new LinearLayout.LayoutParams(0,dp(52),1));
+            groupPlay.setTextSize(10);options.addView(groupPlay,new LinearLayout.LayoutParams(0,dp(48),1));
         }
         if(!recordings.isEmpty()){
             AudioCatalog.Track recording=recordings.get(0);
-            Button full=button("Full group recording",()->{
+            Button full=button(madalBook()?"Full madal recording":"Full group recording",()->{
                 ArrayList<AudioCatalog.Track> one=new ArrayList<>();one.add(recording);playAudio(one,0);
             },false);
-            options.addView(full,new LinearLayout.LayoutParams(0,dp(52),1));
+            full.setTextSize(10);options.addView(full,new LinearLayout.LayoutParams(0,dp(48),1));
             for(int i=1;i<recordings.size();i++){
                 AudioCatalog.Track alternate=recordings.get(i);
                 add(panel,button("Play "+alternate.title,()->{
@@ -595,18 +572,20 @@ public final class MainActivity extends Activity {
                 },false));
             }
         }
+        if(audioController.track()!=null){Button player=button("Player ▶",this::showPlayerSheet,false);player.setTextSize(10);
+            options.addView(player,new LinearLayout.LayoutParams(0,dp(48),1));}
         if(individual==null&&recordings.isEmpty())add(panel,text("No verified recording is mapped to this passage yet.",12,muted(),false));
-        if(bookIndex==21||bookIndex==22)add(panel,text("This madal is one continuous passage. There are no published per-line audio boundaries.",12,muted(),false));
+        if(madalBook())add(panel,text("One full-madal recording is available. Per-pasuram audio boundaries are not verified; use seek or A–B on the full recording.",12,muted(),false));
     }
     private void enterCorrectionMode(){
         new AlertDialog.Builder(this).setTitle("Correction mode")
             .setMessage("Correction controls are highlighted while this mode is on. Reading text is unchanged. Reports cannot be sent from this build yet.")
-            .setPositiveButton("Continue",(d,w)->{correctionMode=true;if(page.equals("Reader"))showReader(selected);else showHome();
+            .setPositiveButton("Continue",(d,w)->{correctionMode=true;if(page.equals("Reader"))showReader(selected);else showSettings();
                 CorrectionIntro.show(this);})
             .setNegativeButton("Cancel",null).show();
     }
     private void exitCorrectionMode(){correctionMode=false;
-        if(page.equals("Reader"))showReader(selected);else showHome();
+        if(page.equals("Reader"))showReader(selected);else showSettings();
         android.widget.Toast.makeText(this,"Correction mode off. Drafts remain on this phone.",android.widget.Toast.LENGTH_SHORT).show();
     }
     private EditText correctionInput(String label,String value,int max,LinearLayout container){
@@ -762,6 +741,23 @@ public final class MainActivity extends Activity {
     }
     private void showSettings(){
         page="Settings";start("Settings","Reading, opening, audio and updates","Settings");
+        LinearLayout library=card(body);add(library,text("YOUR LIBRARY",13,ac(),true));
+        add(library,button("My 4,000 journey · "+readCount()+" marked",this::showJourney,false));
+        add(library,button("☆ Saved pasurams",this::showSaved,false));
+        add(library,button("Reports",this::showCorrectionReports,false));
+        add(library,button(correctionMode?"Exit correction mode":"Correction mode",()->{
+            if(correctionMode)exitCorrectionMode();else enterCorrectionMode();
+        },correctionMode));
+        LinearLayout update=card(body);add(update,text("CONTENT STATUS",13,ac(),true));
+        if(ContentUpdates.configured()){
+            try{int version=contentUpdates.activeVersion();
+                add(update,text(version>0?"Reading text · verified update "+version:"Reading text · offline edition",13,fg(),true));
+            }catch(Exception ex){android.util.Log.w("ContentUpdates","Status unavailable",ex);}
+            String gate=getSharedPreferences("content-settings",MODE_PRIVATE).getString("update-required",null);
+            if(gate!=null){add(update,text("App update required for new content. Saved reading text remains available.",13,fg(),false));
+                add(update,button("Update app",this::showAppUpdate,false));}
+        }
+        add(update,button("Content settings",this::showContentSettings,false));
         LinearLayout opening=card(body);add(opening,text("OPENING",13,ac(),true));
         android.content.SharedPreferences intro=getSharedPreferences("intro",MODE_PRIVATE);
         boolean skip=intro.getBoolean("skip-future",false),muted=intro.getBoolean("music-off",false);
@@ -972,14 +968,12 @@ public final class MainActivity extends Activity {
     private boolean hasBookmarkInRange(int first,int last){for(int n=first;n<=last;n++)if(bookmarked(n))return true;return false;}
     private void showJourney(){page="Journey";start("My 4,000 journey","Private on this device · no streaks","Home");
         int total=readCount();LinearLayout overview=card(body);add(overview,text(total+" marks across 4,000 numbered pasurams",23,ac(),true));
-        add(overview,text("The two long madals cover 40 and 78 numbered pasurams, but each is one continuous source passage without per-number boundaries. Marking a madal read applies to its whole passage.",13,muted(),false));
+        add(overview,text("Siriya and Periya Thirumadal are split into 40 and 78 numbered reading units. The closing lines remain unnumbered; recordings remain full-madal tracks.",13,muted(),false));
         try{for(int i=0;i<books.length();i++){JSONObject meta=books.getJSONObject(i);int n=0;
             for(int id=meta.getInt("start");id<=meta.getInt("end");id++)if(isRead(id))n++;
             LinearLayout c=card(body);add(c,text(meta.getString("name"),17,fg(),true));
             int bookTotal=(meta.getInt("end")-meta.getInt("start")+1);
-            if(i==21||i==22)add(c,text((meta.getInt("end")-meta.getInt("start")+1)+" numbered pasurams · 1 continuous source passage · "+
-                (isRead(meta.getInt("start"))?"whole passage marked read":"whole passage not marked read"),12,muted(),false));
-            else add(c,text(n+" of "+bookTotal+" numbered pasurams",12,muted(),false));
+            add(c,text(n+" of "+bookTotal+" numbered pasurams",12,muted(),false));
             final int book=i;c.setOnClickListener(v->{loadBook(book);selected=0;preferences.edit().putInt("book",book).putInt("selected",0).apply();showIndex();});
         }}catch(Exception e){throw new IllegalStateException("Journey book metadata unavailable",e);}
     }

@@ -1,0 +1,1080 @@
+{
+  "siriya": {
+    "source": "22-siriya-thirumadal-QRYRLO25.json",
+    "numbered": 40,
+    "epilogue_lines": 4,
+    "boundaries": [
+      {
+        "n": 2673,
+        "line": 0,
+        "latin_col": 0,
+        "tamil_col": 0,
+        "match_score": 95.4,
+        "latin_start": "** kArAr varaik konggai kaNNAr kaDal uDukkai ",
+        "tamil_start": "** காரார் வரைக் கொங்கை கண்ணார் கடல் உடுக்கை *"
+      },
+      {
+        "n": 2674,
+        "line": 4,
+        "latin_col": 31,
+        "tamil_col": 32,
+        "match_score": 95.4,
+        "latin_start": "ammUnRum",
+        "tamil_start": "அம்மூன்றும்"
+      },
+      {
+        "n": 2675,
+        "line": 7,
+        "latin_col": 32,
+        "tamil_col": 32,
+        "match_score": 95.4,
+        "latin_start": "sikkena maRRu",
+        "tamil_start": "சிக்கென மற்று"
+      },
+      {
+        "n": 2676,
+        "line": 13,
+        "latin_col": 28,
+        "tamil_col": 27,
+        "match_score": 89.2,
+        "latin_start": "adhil ninRum",
+        "tamil_start": "அதில் நின்றும்"
+      },
+      {
+        "n": 2677,
+        "line": 17,
+        "latin_col": 33,
+        "tamil_col": 33,
+        "match_score": 96.9,
+        "latin_start": "kadhir mulaiyai",
+        "tamil_start": "கதிர் முலையை"
+      },
+      {
+        "n": 2678,
+        "line": 23,
+        "latin_col": 27,
+        "tamil_col": 28,
+        "match_score": 95.4,
+        "latin_start": "sezhuntheruvE",
+        "tamil_start": "செழுந்தெருவே"
+      },
+      {
+        "n": 2679,
+        "line": 28,
+        "latin_col": 28,
+        "tamil_col": 34,
+        "match_score": 93.8,
+        "latin_start": "aRivazhindhu",
+        "tamil_start": "அறிவழிந்து"
+      },
+      {
+        "n": 2680,
+        "line": 31,
+        "latin_col": 36,
+        "tamil_col": 38,
+        "match_score": 93.1,
+        "latin_start": "sengkuRinjchith",
+        "tamil_start": "செங்குறிஞ்சித்"
+      },
+      {
+        "n": 2681,
+        "line": 33,
+        "latin_col": 28,
+        "tamil_col": 28,
+        "match_score": 86.2,
+        "latin_start": "adhanAlum",
+        "tamil_start": "அதனாலும்"
+      },
+      {
+        "n": 2682,
+        "line": 38,
+        "latin_col": 29,
+        "tamil_col": 33,
+        "match_score": 92.3,
+        "latin_start": "adhu kETTuk",
+        "tamil_start": "அது கேட்டுக்"
+      },
+      {
+        "n": 2683,
+        "line": 42,
+        "latin_col": 29,
+        "tamil_col": 32,
+        "match_score": 94.9,
+        "latin_start": "pErththEyum",
+        "tamil_start": "பேர்த்தேயும்"
+      },
+      {
+        "n": 2684,
+        "line": 44,
+        "latin_col": 29,
+        "tamil_col": 30,
+        "match_score": 93.8,
+        "latin_start": "thiruththuzhAyth",
+        "tamil_start": "திருத்துழாய்த்"
+      },
+      {
+        "n": 2685,
+        "line": 51,
+        "latin_col": 35,
+        "tamil_col": 32,
+        "match_score": 92.3,
+        "latin_start": "Azhi nIr",
+        "tamil_start": "ஆழி நீர்"
+      },
+      {
+        "n": 2686,
+        "line": 64,
+        "latin_col": 28,
+        "tamil_col": 27,
+        "match_score": 93.8,
+        "latin_start": "arugirundha",
+        "tamil_start": "அருகிருந்த"
+      },
+      {
+        "n": 2687,
+        "line": 67,
+        "latin_col": 34,
+        "tamil_col": 31,
+        "match_score": 90.8,
+        "latin_start": "vayiRaDiththu inggu",
+        "tamil_start": "வயிறடித்து இங்கு"
+      },
+      {
+        "n": 2688,
+        "line": 72,
+        "latin_col": 29,
+        "tamil_col": 30,
+        "match_score": 89.2,
+        "latin_start": "anRiyum",
+        "tamil_start": "அன்றியும்"
+      },
+      {
+        "n": 2689,
+        "line": 76,
+        "latin_col": 32,
+        "tamil_col": 34,
+        "match_score": 92.3,
+        "latin_start": "than sIthaikku",
+        "tamil_start": "தன் சீதைக்கு"
+      },
+      {
+        "n": 2690,
+        "line": 79,
+        "latin_col": 36,
+        "tamil_col": 33,
+        "match_score": 96.9,
+        "latin_start": "vennaragam",
+        "tamil_start": "வெந்நரகம்"
+      },
+      {
+        "n": 2691,
+        "line": 82,
+        "latin_col": 31,
+        "tamil_col": 27,
+        "match_score": 93.8,
+        "latin_start": "Iraindhu",
+        "tamil_start": "ஈரைந்து"
+      },
+      {
+        "n": 2692,
+        "line": 85,
+        "latin_col": 31,
+        "tamil_col": 33,
+        "match_score": 93.8,
+        "latin_start": "kuDal mAlai",
+        "tamil_start": "குடல் மாலை"
+      },
+      {
+        "n": 2693,
+        "line": 88,
+        "latin_col": 29,
+        "tamil_col": 30,
+        "match_score": 95.4,
+        "latin_start": "anRiyum",
+        "tamil_start": "அன்றியும்"
+      },
+      {
+        "n": 2694,
+        "line": 92,
+        "latin_col": 0,
+        "tamil_col": 0,
+        "match_score": 98.5,
+        "latin_start": "ArAdha pOril asurargaLum thAnumAy *",
+        "tamil_start": "ஆராத போரில் அசுரர்களும் தானுமாய் *"
+      },
+      {
+        "n": 2695,
+        "line": 94,
+        "latin_col": 32,
+        "tamil_col": 31,
+        "match_score": 95.4,
+        "latin_start": "thiruththuzhAyth",
+        "tamil_start": "திருத்துழாய்த்"
+      },
+      {
+        "n": 2696,
+        "line": 99,
+        "latin_col": 29,
+        "tamil_col": 31,
+        "match_score": 93.8,
+        "latin_start": "ena veguNDu",
+        "tamil_start": "என வெகுண்டு"
+      },
+      {
+        "n": 2697,
+        "line": 103,
+        "latin_col": 37,
+        "tamil_col": 36,
+        "match_score": 98.5,
+        "latin_start": "sikkena maRRu",
+        "tamil_start": "சிக்கென மற்று"
+      },
+      {
+        "n": 2698,
+        "line": 107,
+        "latin_col": 31,
+        "tamil_col": 33,
+        "match_score": 93.7,
+        "latin_start": "nAn avanaik",
+        "tamil_start": "நான் அவனைக்"
+      },
+      {
+        "n": 2699,
+        "line": 109,
+        "latin_col": 35,
+        "tamil_col": 32,
+        "match_score": 96.7,
+        "latin_start": "pinnaiyum",
+        "tamil_start": "பின்னையும்"
+      },
+      {
+        "n": 2700,
+        "line": 111,
+        "latin_col": 31,
+        "tamil_col": 31,
+        "match_score": 89.2,
+        "latin_start": "sUzh kuzhalAr",
+        "tamil_start": "சூழ் குழலார்"
+      },
+      {
+        "n": 2701,
+        "line": 114,
+        "latin_col": 31,
+        "tamil_col": 28,
+        "match_score": 96.9,
+        "latin_start": "maNivaNNan",
+        "tamil_start": "மணிவண்ணன்"
+      },
+      {
+        "n": 2702,
+        "line": 121,
+        "latin_col": 35,
+        "tamil_col": 30,
+        "match_score": 96.6,
+        "latin_start": "valvinaiyEn",
+        "tamil_start": "வல்வினையேன்"
+      },
+      {
+        "n": 2703,
+        "line": 122,
+        "latin_col": 26,
+        "tamil_col": 26,
+        "match_score": 92.9,
+        "latin_start": "maRRenakku inggu",
+        "tamil_start": "மற்றெனக்கு இங்கு"
+      },
+      {
+        "n": 2704,
+        "line": 124,
+        "latin_col": 24,
+        "tamil_col": 27,
+        "match_score": 95.2,
+        "latin_start": "neDungkaNgaL",
+        "tamil_start": "நெடுங்கண்கள்"
+      },
+      {
+        "n": 2705,
+        "line": 126,
+        "latin_col": 28,
+        "tamil_col": 27,
+        "match_score": 98.4,
+        "latin_start": "pinnaiyum",
+        "tamil_start": "பின்னையும்"
+      },
+      {
+        "n": 2706,
+        "line": 129,
+        "latin_col": 0,
+        "tamil_col": 0,
+        "match_score": 96.9,
+        "latin_start": "ArAnum AdhAnum allaL avaL kANIr *",
+        "tamil_start": "ஆரானும் ஆதானும் அல்லள் அவள் காணீர் *"
+      },
+      {
+        "n": 2707,
+        "line": 131,
+        "latin_col": 25,
+        "tamil_col": 27,
+        "match_score": 96.9,
+        "latin_start": "avaLum than",
+        "tamil_start": "அவளும் தன்"
+      },
+      {
+        "n": 2708,
+        "line": 134,
+        "latin_col": 30,
+        "tamil_col": 30,
+        "match_score": 96.9,
+        "latin_start": "maRRenakku inggu",
+        "tamil_start": "மற்றெனக்கு இங்கு"
+      },
+      {
+        "n": 2709,
+        "line": 141,
+        "latin_col": 31,
+        "tamil_col": 29,
+        "match_score": 100.0,
+        "latin_start": "kaNamanggai",
+        "tamil_start": "கணமங்கை"
+      },
+      {
+        "n": 2710,
+        "line": 147,
+        "latin_col": 0,
+        "tamil_col": 0,
+        "match_score": 93.8,
+        "latin_start": "pArOr pugazhum vadhari vaDa madhurai *",
+        "tamil_start": "பாரோர் புகழும் வதரி வட மதுரை *"
+      },
+      {
+        "n": 2711,
+        "line": 151,
+        "latin_col": 37,
+        "tamil_col": 32,
+        "match_score": 82.1,
+        "latin_start": "eNNarum sIr",
+        "tamil_start": "எண்ணரும் சீர்"
+      },
+      {
+        "n": 2712,
+        "line": 152,
+        "latin_col": 26,
+        "tamil_col": 26,
+        "match_score": 90.7,
+        "latin_start": "** peruntheruvE",
+        "tamil_start": "* பெருந்தெருவே"
+      }
+    ],
+    "epilogue_first_line": 155
+  },
+  "periya": {
+    "source": "23-periya-thirumadal-PCHQELOE.json",
+    "numbered": 78,
+    "epilogue_lines": 4,
+    "boundaries": [
+      {
+        "n": 2713,
+        "line": 0,
+        "latin_col": 0,
+        "tamil_col": 0,
+        "match_score": 96.9,
+        "latin_start": "** manniya pal poRi sEr Ayira vAy vAL aravin ",
+        "tamil_start": "** மன்னிய பல் பொறி சேர் ஆயிர வாய் வாள் அரவின்"
+      },
+      {
+        "n": 2714,
+        "line": 5,
+        "latin_col": 31,
+        "tamil_col": 31,
+        "match_score": 98.3,
+        "latin_start": "iru suDarai",
+        "tamil_start": "இரு சுடரை"
+      },
+      {
+        "n": 2715,
+        "line": 7,
+        "latin_col": 30,
+        "tamil_col": 26,
+        "match_score": 100.0,
+        "latin_start": "nila manggai",
+        "tamil_start": "நில மங்கை"
+      },
+      {
+        "n": 2716,
+        "line": 10,
+        "latin_col": 33,
+        "tamil_col": 34,
+        "match_score": 96.9,
+        "latin_start": "mazhaik kUndhal",
+        "tamil_start": "மழைக் கூந்தல்"
+      },
+      {
+        "n": 2717,
+        "line": 13,
+        "latin_col": 28,
+        "tamil_col": 25,
+        "match_score": 92.3,
+        "latin_start": "aDi iNaiyaith",
+        "tamil_start": "அடி இணையைத்"
+      },
+      {
+        "n": 2718,
+        "line": 18,
+        "latin_col": 40,
+        "tamil_col": 35,
+        "match_score": 98.5,
+        "latin_start": "maRRavanum",
+        "tamil_start": "மற்றவனும்"
+      },
+      {
+        "n": 2719,
+        "line": 21,
+        "latin_col": 32,
+        "tamil_col": 32,
+        "match_score": 93.8,
+        "latin_start": "nAnkinilum",
+        "tamil_start": "நான்கினிலும்"
+      },
+      {
+        "n": 2720,
+        "line": 25,
+        "latin_col": 40,
+        "tamil_col": 39,
+        "match_score": 90.8,
+        "latin_start": "venjchuDarOn",
+        "tamil_start": "வெஞ்சுடரோன்"
+      },
+      {
+        "n": 2721,
+        "line": 30,
+        "latin_col": 31,
+        "tamil_col": 31,
+        "match_score": 93.7,
+        "latin_start": "uLadhennil",
+        "tamil_start": "உளதென்னில்"
+      },
+      {
+        "n": 2722,
+        "line": 32,
+        "latin_col": 29,
+        "tamil_col": 32,
+        "match_score": 93.8,
+        "latin_start": "vIDennum",
+        "tamil_start": "வீடென்னும்"
+      },
+      {
+        "n": 2723,
+        "line": 35,
+        "latin_col": 30,
+        "tamil_col": 31,
+        "match_score": 95.4,
+        "latin_start": "adhu niRka",
+        "tamil_start": "அது நிற்க"
+      },
+      {
+        "n": 2724,
+        "line": 38,
+        "latin_col": 40,
+        "tamil_col": 40,
+        "match_score": 96.9,
+        "latin_start": "ponggoLi sEr",
+        "tamil_start": "பொங்கொளி சேர்"
+      },
+      {
+        "n": 2725,
+        "line": 40,
+        "latin_col": 33,
+        "tamil_col": 31,
+        "match_score": 90.8,
+        "latin_start": "vAL neDungkaN",
+        "tamil_start": "வாள் நெடுங்கண்"
+      },
+      {
+        "n": 2726,
+        "line": 42,
+        "latin_col": 31,
+        "tamil_col": 31,
+        "match_score": 96.9,
+        "latin_start": "marunggirundha",
+        "tamil_start": "மருங்கிருந்த"
+      },
+      {
+        "n": 2727,
+        "line": 49,
+        "latin_col": 33,
+        "tamil_col": 33,
+        "match_score": 92.3,
+        "latin_start": "mazhaith thaDangkaN",
+        "tamil_start": "மழைத் தடங்கண்"
+      },
+      {
+        "n": 2728,
+        "line": 55,
+        "latin_col": 37,
+        "tamil_col": 40,
+        "match_score": 95.4,
+        "latin_start": "iru visumbil",
+        "tamil_start": "இரு விசும்பில்"
+      },
+      {
+        "n": 2729,
+        "line": 58,
+        "latin_col": 30,
+        "tamil_col": 29,
+        "match_score": 93.8,
+        "latin_start": "mazhaik kaNNAr",
+        "tamil_start": "மழைக் கண்ணார்"
+      },
+      {
+        "n": 2730,
+        "line": 62,
+        "latin_col": 28,
+        "tamil_col": 25,
+        "match_score": 98.5,
+        "latin_start": "Or mandhAram",
+        "tamil_start": "ஓர் மந்தாரம்"
+      },
+      {
+        "n": 2731,
+        "line": 66,
+        "latin_col": 40,
+        "tamil_col": 35,
+        "match_score": 93.8,
+        "latin_start": "thAnggarunjchIr",
+        "tamil_start": "தாங்கருஞ்சீர்"
+      },
+      {
+        "n": 2732,
+        "line": 68,
+        "latin_col": 26,
+        "tamil_col": 27,
+        "match_score": 89.2,
+        "latin_start": "agam kuzhaindhu Anggu",
+        "tamil_start": "அகம் குழைந்து ஆங்கு"
+      },
+      {
+        "n": 2733,
+        "line": 71,
+        "latin_col": 30,
+        "tamil_col": 30,
+        "match_score": 92.3,
+        "latin_start": "idhu anRE",
+        "tamil_start": "இது அன்றே"
+      },
+      {
+        "n": 2734,
+        "line": 73,
+        "latin_col": 31,
+        "tamil_col": 25,
+        "match_score": 95.4,
+        "latin_start": "kAmaththin",
+        "tamil_start": "காமத்தின்"
+      },
+      {
+        "n": 2735,
+        "line": 77,
+        "latin_col": 35,
+        "tamil_col": 35,
+        "match_score": 90.8,
+        "latin_start": "adhanai yAm theLiyOm",
+        "tamil_start": "அதனை யாம் தெளியோம்"
+      },
+      {
+        "n": 2736,
+        "line": 80,
+        "latin_col": 31,
+        "tamil_col": 29,
+        "match_score": 95.1,
+        "latin_start": "Ayan vEy",
+        "tamil_start": "ஆயன் வேய்"
+      },
+      {
+        "n": 2737,
+        "line": 82,
+        "latin_col": 32,
+        "tamil_col": 30,
+        "match_score": 96.8,
+        "latin_start": "peNNai mEl",
+        "tamil_start": "பெண்ணை மேல்"
+      },
+      {
+        "n": 2738,
+        "line": 84,
+        "latin_col": 30,
+        "tamil_col": 30,
+        "match_score": 93.3,
+        "latin_start": "umbar vAyth",
+        "tamil_start": "உம்பர் வாய்த்"
+      },
+      {
+        "n": 2739,
+        "line": 86,
+        "latin_col": 35,
+        "tamil_col": 29,
+        "match_score": 94.3,
+        "latin_start": "kAma vEL",
+        "tamil_start": "காம வேள்"
+      },
+      {
+        "n": 2740,
+        "line": 88,
+        "latin_col": 28,
+        "tamil_col": 28,
+        "match_score": 95.4,
+        "latin_start": "tham pUvaNai mEl",
+        "tamil_start": "தம் பூவணை மேல்"
+      },
+      {
+        "n": 2741,
+        "line": 91,
+        "latin_col": 35,
+        "tamil_col": 36,
+        "match_score": 93.8,
+        "latin_start": "pOr vEndhan",
+        "tamil_start": "போர் வேந்தன்"
+      },
+      {
+        "n": 2742,
+        "line": 94,
+        "latin_col": 31,
+        "tamil_col": 30,
+        "match_score": 92.3,
+        "latin_start": "mAthiranggaL",
+        "tamil_start": "மாதிரங்கள்"
+      },
+      {
+        "n": 2743,
+        "line": 98,
+        "latin_col": 31,
+        "tamil_col": 30,
+        "match_score": 93.8,
+        "latin_start": "koDungkadhirOn",
+        "tamil_start": "கொடுங்கதிரோன்"
+      },
+      {
+        "n": 2744,
+        "line": 102,
+        "latin_col": 0,
+        "tamil_col": 0,
+        "match_score": 98.5,
+        "latin_start": "pinnum karu neDungkaN sevvAyp piNai nOkkin *",
+        "tamil_start": "பின்னும் கரு நெடுங்கண் செவ்வாய்ப் பிணை நோக்கி"
+      },
+      {
+        "n": 2745,
+        "line": 106,
+        "latin_col": 40,
+        "tamil_col": 36,
+        "match_score": 100.0,
+        "latin_start": "vAL amaruL",
+        "tamil_start": "வாள் அமருள்"
+      },
+      {
+        "n": 2746,
+        "line": 108,
+        "latin_col": 34,
+        "tamil_col": 34,
+        "match_score": 98.5,
+        "latin_start": "pUngganggai",
+        "tamil_start": "பூங்கங்கை"
+      },
+      {
+        "n": 2747,
+        "line": 112,
+        "latin_col": 29,
+        "tamil_col": 26,
+        "match_score": 98.5,
+        "latin_start": "pAvai than",
+        "tamil_start": "பாவை தன்"
+      },
+      {
+        "n": 2748,
+        "line": 114,
+        "latin_col": 35,
+        "tamil_col": 29,
+        "match_score": 93.8,
+        "latin_start": "thAn avan than",
+        "tamil_start": "தான் அவன் தன்"
+      },
+      {
+        "n": 2749,
+        "line": 117,
+        "latin_col": 40,
+        "tamil_col": 40,
+        "match_score": 95.4,
+        "latin_start": "sUzh kaDaluL",
+        "tamil_start": "சூழ் கடலுள்"
+      },
+      {
+        "n": 2750,
+        "line": 121,
+        "latin_col": 33,
+        "tamil_col": 31,
+        "match_score": 93.4,
+        "latin_start": "thannuDaiya",
+        "tamil_start": "தன்னுடைய"
+      },
+      {
+        "n": 2751,
+        "line": 123,
+        "latin_col": 36,
+        "tamil_col": 32,
+        "match_score": 95.4,
+        "latin_start": "pAviyEn",
+        "tamil_start": "பாவியேன்"
+      },
+      {
+        "n": 2752,
+        "line": 127,
+        "latin_col": 31,
+        "tamil_col": 33,
+        "match_score": 96.8,
+        "latin_start": "maRRivai thAn",
+        "tamil_start": "மற்றிவை தான்"
+      },
+      {
+        "n": 2753,
+        "line": 129,
+        "latin_col": 33,
+        "tamil_col": 30,
+        "match_score": 98.5,
+        "latin_start": "vANilA",
+        "tamil_start": "வாணிலா"
+      },
+      {
+        "n": 2754,
+        "line": 134,
+        "latin_col": 33,
+        "tamil_col": 32,
+        "match_score": 93.8,
+        "latin_start": "AyiranthOL",
+        "tamil_start": "ஆயிரந்தோள்"
+      },
+      {
+        "n": 2755,
+        "line": 142,
+        "latin_col": 34,
+        "tamil_col": 33,
+        "match_score": 95.4,
+        "latin_start": "pAviyERku",
+        "tamil_start": "பாவியேற்கு"
+      },
+      {
+        "n": 2756,
+        "line": 146,
+        "latin_col": 35,
+        "tamil_col": 35,
+        "match_score": 96.8,
+        "latin_start": "nOkkudhalum",
+        "tamil_start": "நோக்குதலும்"
+      },
+      {
+        "n": 2757,
+        "line": 148,
+        "latin_col": 32,
+        "tamil_col": 28,
+        "match_score": 96.9,
+        "latin_start": "panggayaththin",
+        "tamil_start": "பங்கயத்தின்"
+      },
+      {
+        "n": 2758,
+        "line": 153,
+        "latin_col": 37,
+        "tamil_col": 34,
+        "match_score": 96.9,
+        "latin_start": "Or",
+        "tamil_start": "ஓர்"
+      },
+      {
+        "n": 2759,
+        "line": 161,
+        "latin_col": 30,
+        "tamil_col": 31,
+        "match_score": 93.8,
+        "latin_start": "madhi uguththa",
+        "tamil_start": "மதி உகுத்த"
+      },
+      {
+        "n": 2760,
+        "line": 172,
+        "latin_col": 36,
+        "tamil_col": 30,
+        "match_score": 96.9,
+        "latin_start": "thamiyEn mEl",
+        "tamil_start": "தமியேன் மேல்"
+      },
+      {
+        "n": 2761,
+        "line": 174,
+        "latin_col": 37,
+        "tamil_col": 38,
+        "match_score": 96.9,
+        "latin_start": "pEdhaiyEn",
+        "tamil_start": "பேதையேன்"
+      },
+      {
+        "n": 2762,
+        "line": 179,
+        "latin_col": 31,
+        "tamil_col": 27,
+        "match_score": 98.5,
+        "latin_start": "kaNapuraththup",
+        "tamil_start": "கணபுரத்துப்"
+      },
+      {
+        "n": 2763,
+        "line": 183,
+        "latin_col": 34,
+        "tamil_col": 34,
+        "match_score": 98.5,
+        "latin_start": "mAl viDaiyin",
+        "tamil_start": "மால் விடையின்"
+      },
+      {
+        "n": 2764,
+        "line": 185,
+        "latin_col": 32,
+        "tamil_col": 33,
+        "match_score": 90.8,
+        "latin_start": "mAlai vAyth",
+        "tamil_start": "மாலை வாய்த்"
+      },
+      {
+        "n": 2765,
+        "line": 189,
+        "latin_col": 32,
+        "tamil_col": 34,
+        "match_score": 92.2,
+        "latin_start": "idhu viLaiththa",
+        "tamil_start": "இது விளைத்த"
+      },
+      {
+        "n": 2766,
+        "line": 191,
+        "latin_col": 32,
+        "tamil_col": 32,
+        "match_score": 95.4,
+        "latin_start": "kAyAvin",
+        "tamil_start": "காயாவின்"
+      },
+      {
+        "n": 2767,
+        "line": 196,
+        "latin_col": 38,
+        "tamil_col": 33,
+        "match_score": 100.0,
+        "latin_start": "Ayirak kaN",
+        "tamil_start": "ஆயிரக் கண்"
+      },
+      {
+        "n": 2768,
+        "line": 200,
+        "latin_col": 41,
+        "tamil_col": 39,
+        "match_score": 96.5,
+        "latin_start": "vallALan",
+        "tamil_start": "வல்லாளன்"
+      },
+      {
+        "n": 2769,
+        "line": 202,
+        "latin_col": 35,
+        "tamil_col": 32,
+        "match_score": 93.8,
+        "latin_start": "avanuDaiya",
+        "tamil_start": "அவனுடைய"
+      },
+      {
+        "n": 2770,
+        "line": 212,
+        "latin_col": 36,
+        "tamil_col": 32,
+        "match_score": 98.4,
+        "latin_start": "maRRanRiyum",
+        "tamil_start": "மற்றன்றியும்"
+      },
+      {
+        "n": 2771,
+        "line": 214,
+        "latin_col": 32,
+        "tamil_col": 35,
+        "match_score": 95.4,
+        "latin_start": "mAvali than",
+        "tamil_start": "மாவலி தன்"
+      },
+      {
+        "n": 2772,
+        "line": 218,
+        "latin_col": 37,
+        "tamil_col": 34,
+        "match_score": 96.9,
+        "latin_start": "maRRavanum",
+        "tamil_start": "மற்றவனும்"
+      },
+      {
+        "n": 2773,
+        "line": 220,
+        "latin_col": 37,
+        "tamil_col": 36,
+        "match_score": 93.8,
+        "latin_start": "mEl eDuththa",
+        "tamil_start": "மேல் எடுத்த"
+      },
+      {
+        "n": 2774,
+        "line": 224,
+        "latin_col": 37,
+        "tamil_col": 32,
+        "match_score": 98.5,
+        "latin_start": "thAmarai mEl",
+        "tamil_start": "தாமரை மேல்"
+      },
+      {
+        "n": 2775,
+        "line": 228,
+        "latin_col": 32,
+        "tamil_col": 27,
+        "match_score": 98.5,
+        "latin_start": "mA malar mEl",
+        "tamil_start": "மா மலர் மேல்"
+      },
+      {
+        "n": 2776,
+        "line": 234,
+        "latin_col": 41,
+        "tamil_col": 38,
+        "match_score": 95.4,
+        "latin_start": "vallavAzhp",
+        "tamil_start": "வல்லவாழ்ப்"
+      },
+      {
+        "n": 2777,
+        "line": 238,
+        "latin_col": 33,
+        "tamil_col": 29,
+        "match_score": 95.4,
+        "latin_start": "vAnavar tham",
+        "tamil_start": "வானவர் தம்"
+      },
+      {
+        "n": 2778,
+        "line": 242,
+        "latin_col": 32,
+        "tamil_col": 32,
+        "match_score": 96.8,
+        "latin_start": "kOvalUr",
+        "tamil_start": "கோவலூர்"
+      },
+      {
+        "n": 2779,
+        "line": 244,
+        "latin_col": 32,
+        "tamil_col": 32,
+        "match_score": 92.3,
+        "latin_start": "aLLal vAy",
+        "tamil_start": "அள்ளல் வாய்"
+      },
+      {
+        "n": 2780,
+        "line": 247,
+        "latin_col": 0,
+        "tamil_col": 0,
+        "match_score": 92.3,
+        "latin_start": "minni mazhai thavazhum vEngkaDaththu em vitht",
+        "tamil_start": "மின்னி மழை தவழும் வேங்கடத்து எம் வித்தகனை *"
+      },
+      {
+        "n": 2781,
+        "line": 249,
+        "latin_col": 33,
+        "tamil_col": 31,
+        "match_score": 93.8,
+        "latin_start": "kOTTiyUr",
+        "tamil_start": "கோட்டியூர்"
+      },
+      {
+        "n": 2782,
+        "line": 253,
+        "latin_col": 38,
+        "tamil_col": 32,
+        "match_score": 90.8,
+        "latin_start": "veqkAvil",
+        "tamil_start": "வெஃகாவில்"
+      },
+      {
+        "n": 2783,
+        "line": 256,
+        "latin_col": 33,
+        "tamil_col": 28,
+        "match_score": 96.9,
+        "latin_start": "vAnavar tham",
+        "tamil_start": "வானவர் தம்"
+      },
+      {
+        "n": 2784,
+        "line": 259,
+        "latin_col": 30,
+        "tamil_col": 27,
+        "match_score": 92.3,
+        "latin_start": "nIrmalai mEl",
+        "tamil_start": "நீர்மலை மேல்"
+      },
+      {
+        "n": 2785,
+        "line": 263,
+        "latin_col": 41,
+        "tamil_col": 34,
+        "match_score": 96.9,
+        "latin_start": "nAn vaNanggum",
+        "tamil_start": "நான் வணங்கும்"
+      },
+      {
+        "n": 2786,
+        "line": 268,
+        "latin_col": 32,
+        "tamil_col": 32,
+        "match_score": 96.9,
+        "latin_start": "thannai nAn",
+        "tamil_start": "தன்னை நான்"
+      },
+      {
+        "n": 2787,
+        "line": 272,
+        "latin_col": 34,
+        "tamil_col": 34,
+        "match_score": 96.9,
+        "latin_start": "thAn muna nAL",
+        "tamil_start": "தான் முன நாள்"
+      },
+      {
+        "n": 2788,
+        "line": 274,
+        "latin_col": 33,
+        "tamil_col": 31,
+        "match_score": 92.3,
+        "latin_start": "thayir veNNey",
+        "tamil_start": "தயிர் வெண்ணெய்"
+      },
+      {
+        "n": 2789,
+        "line": 287,
+        "latin_col": 38,
+        "tamil_col": 33,
+        "match_score": 83.1,
+        "latin_start": "vAL eyiRRuth",
+        "tamil_start": "வாள் எயிற்றுத்"
+      },
+      {
+        "n": 2790,
+        "line": 292,
+        "latin_col": 41,
+        "tamil_col": 36,
+        "match_score": 96.9,
+        "latin_start": "mAmunikkAth",
+        "tamil_start": "மாமுனிக்காத்"
+      }
+    ],
+    "epilogue_first_line": 297
+  }
+}

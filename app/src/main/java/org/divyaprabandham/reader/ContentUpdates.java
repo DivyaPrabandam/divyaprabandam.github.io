@@ -93,7 +93,18 @@ final class ContentUpdates {
             if(!base.getString("id").equals(descriptor.getString("id"))){android.util.Log.w("ContentUpdates","Book order changed; using bundled books");return bundled;}
             JSONObject meta=new JSONObject(base.toString());
             meta.put("file",descriptor.getString("file"));
-            // Download descriptors contain hashes and filenames, not reader-facing labels.
+            // A previously installed signed snapshot may still contain one whole madal row.
+            // Its current manifest has no row-count field. Inspect the verified local shard,
+            // falling back to the app's bundled split until a newly signed split arrives.
+            if(i==21||i==22){
+                String current=readBook(descriptor.getString("file"));
+                if(current!=null){
+                    try{JSONObject book=new JSONObject(current);
+                        if(book.getJSONArray("sections").getJSONObject(0).getJSONArray("p").length()==1)
+                            meta.put("file",base.getString("file"));
+                    }catch(Exception malformed){meta.put("file",base.getString("file"));}
+                }
+            }
             merged.put(meta);
         }
         return merged;

@@ -15,7 +15,8 @@ for path in (base/'books').glob('*.json'):
  book=json.loads(path.read_text())
  for section in book['sections']:
   for row in section['p']:rows[str(row[0])]=(book['id'],row[0],row[1])
-assert set(verses)==set(rows)-{'2673','2713'}
+assert set(verses)==set(rows)-{str(n) for n in list(range(2673,2713))+list(range(2713,2791))}
 assert groups['22-siriya-thirumadal:2673'][0][0].endswith('2673–2712')
 assert groups['23-periya-thirumadal:2713'][0][0].endswith('2713–2790')
+assert len(rows)==4000
 print({'individual_tracks':len(verses),'canonical_rows':len(rows),'group_recordings':sum(map(len,groups.values())),'madals_full_passage':2})

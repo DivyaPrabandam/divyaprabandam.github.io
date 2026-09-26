@@ -38,6 +38,9 @@ final class AudioCatalog {
                 if(first>number&&first<end)end=first;
             }catch(NumberFormatException ignored){}
         }
+        // The madals have only one full recording at their first number, not a clip per verse.
+        if(bookId.equals("22-siriya-thirumadal")||bookId.equals("23-periya-thirumadal"))
+            return new int[]{start<0?number:start,max};
         return start<0?new int[]{number,number}:new int[]{start,Math.min(max,end-1)};
     }
     ArrayList<Track> recordings(String bookId,int first){
